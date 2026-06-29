@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MedBot — Patient Profile</title>
+  <style>
+    :root{
+      --blue:#1565C0;--blue-light:#1E88E5;--blue-dark:#0D47A1;
+      --bg:#F0F4FF;--white:#fff;--text:#1A1A2E;--muted:#607D8B;
+      --border:#DCE4F0;--shadow:0 4px 24px rgba(13,71,161,.12);
+      --green:#2E7D32;--red:#C62828;--orange:#E65100;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);min-height:100vh;color:var(--text)}
+
+    /* ── Header ── */
+    .header{
+      background:linear-gradient(135deg,var(--blue-dark),var(--blue));
+      padding:0 32px;height:64px;display:flex;align-items:center;justify-content:space-between;
+      box-shadow:0 2px 16px rgba(13,71,161,.25);position:sticky;top:0;z-index:100;
+    }
+    .header-left{display:flex;align-items:center;gap:14px}
+    .back-btn{
+      background:rgba(255,255,255,.15);border:none;color:#fff;padding:7px 14px;
+      border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;transition:.18s;
+      display:flex;align-items:center;gap:6px;
+    }
+    .back-btn:hover{background:rgba(255,255,255,.25)}
+    .header-title{font-size:18px;font-weight:700;color:#fff;display:flex;align-items:center;gap:8px}
+    .header-right{display:flex;gap:10px}
+    .edit-btn{
+      background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.3);color:#fff;
+      padding:8px 18px;border-radius:9px;cursor:pointer;font-size:13px;font-weight:600;transition:.18s;
+    }
+    .edit-btn:hover{background:rgba(255,255,255,.25)}
+    .save-btn{
+      background:#fff;border:none;color:var(--blue-dark);
+      padding:8px 20px;border-radius:9px;cursor:pointer;font-size:13px;font-weight:700;transition:.18s;
+      display:none;
+    }
+    .save-btn:hover{background:#E3F2FD}
+
+    /* ── Layout ── */
+    .page{max-width:920px;margin:32px auto;padding:0 20px 60px}
+
+    /* ── Avatar banner ── */
+    .profile-banner{
+      background:linear-gradient(135deg,var(--blue-dark),var(--blue-light));
+      border-radius:18px;padding:28px 32px;display:flex;align-items:center;gap:24px;
+      margin-bottom:28px;box-shadow:var(--shadow);
+    }
+    .avatar{
+      width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.2);
+      border:3px solid rgba(255,255,255,.4);display:flex;align-items:center;justify-content:center;
+      font-size:32px;font-weight:800;color:#fff;flex-shrink:0;
+    }
+    .banner-info h1{font-size:24px;font-weight:800;color:#fff;margin-bottom:4px}
+    .banner-info p{font-size:13px;color:rgba(255,255,255,.65)}
+    .banner-tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+    .tag{
+      background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);
+      color:#fff;padding:4px 12px;border-radius:20px;font-size:11.5px;font-weight:600;
+    }
+
+    /* ── Sections ── */
+    .section{background:var(--white);border-radius:16px;box-shadow:var(--shadow);margin-bottom:20px;overflow:hidden}
+    .section-header{
+      padding:18px 24px 14px;border-bottom:1.5px solid var(--border);
+      display:flex;align-items:center;gap:10px;
+    }
+    .section-icon{
+      width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;
+    }
+    .icon-basic{background:#E3F2FD}
+    .icon-physical{background:#E8F5E9}
+    .icon-medical{background:#FFF3E0}
+    .icon-meds{background:#F3E5F5}
+    .icon-other{background:#E0F7FA}
+    .section-title{font-size:15px;font-weight:700;color:var(--text)}
+    .section-sub{font-size:12px;color:var(--muted);margin-top:1px}
+
+    .section-body{padding:22px 24px}
+
+    /* ── Grid ── */
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+    .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px}
+    .full{grid-column:1/-1}
+
+    /* ── View mode ── */
+    .field-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:5px}
+    .field-value{font-size:14.5px;font-weight:600;color:var(--text);padding:10px 14px;background:#F8FAFF;border-radius:9px;border:1.5px solid var(--border);min-height:40px}
+    .field-value.empty{color:#B0BEC5;font-style:italic;font-weight:400}
+
+    /* ── Edit mode ── */
+    .field-input{
+      width:100%;font-size:14px;padding:10px 14px;border:1.5px solid var(--border);border-radius:9px;
+      font-family:inherit;color:var(--text);background:#FAFBFD;outline:none;transition:.18s;display:none;
+    }
+    .field-input:focus{border-color:var(--blue-light);background:#fff;box-shadow:0 0 0 3px rgba(30,136,229,.1)}
+    .field-select{appearance:none;cursor:pointer}
+
+    /* ── Conditions checkboxes ── */
+    .conditions-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+    .cond-chip{
+      display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:10px;
+      border:1.5px solid var(--border);cursor:pointer;transition:.18s;background:#F8FAFF;
+    }
+    .cond-chip:hover{border-color:var(--blue-light);background:#EFF6FF}
+    .cond-chip.checked{border-color:var(--blue);background:#E3F2FD}
+    .cond-chip input{display:none}
+    .cond-dot{
+      width:18px;height:18px;border-radius:5px;border:2px solid var(--border);
+      display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:.18s;
+    }
+    .cond-chip.checked .cond-dot{background:var(--blue);border-color:var(--blue)}
+    .cond-dot::after{content:'✓';font-size:10px;color:#fff;display:none}
+    .cond-chip.checked .cond-dot::after{display:block}
+    .cond-label{font-size:13px;font-weight:600;color:var(--text)}
+    .cond-icon{font-size:16px}
+
+    /* View-mode condition tags */
+    .cond-tags{display:flex;flex-wrap:wrap;gap:8px}
+    .cond-tag{
+      padding:5px 12px;border-radius:20px;font-size:12.5px;font-weight:600;
+      background:#E3F2FD;color:var(--blue-dark);border:1px solid #BBDEFB;
+    }
+    .cond-tag.none{background:#F5F5F5;color:var(--muted);font-style:italic;font-weight:400}
+
+    /* ── Stats strip ── */
+    .stats-strip{
+      display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px;
+    }
+    .stat-card{
+      background:var(--white);border-radius:14px;padding:18px;box-shadow:var(--shadow);
+      text-align:center;border-bottom:3px solid transparent;
+    }
+    .stat-card.blue{border-bottom-color:var(--blue)}
+    .stat-card.green{border-bottom-color:#43A047}
+    .stat-card.orange{border-bottom-color:#FB8C00}
+    .stat-card.purple{border-bottom-color:#8E24AA}
+    .stat-num{font-size:22px;font-weight:800;color:var(--text)}
+    .stat-lbl{font-size:11px;color:var(--muted);margin-top:3px;font-weight:600}
+
+    /* ── Toast ── */
+    .toast{
+      position:fixed;bottom:28px;right:28px;background:#1B5E20;color:#fff;
+      padding:12px 22px;border-radius:12px;font-size:13.5px;font-weight:600;
+      box-shadow:0 4px 20px rgba(0,0,0,.2);transform:translateY(80px);opacity:0;
+      transition:.3s;z-index:9999;
+    }
+    .toast.show{transform:translateY(0);opacity:1}
+
+    /* ── Emergency ── */
+    .emer-fab{
+      position:fixed;bottom:28px;left:28px;width:54px;height:54px;border-radius:50%;
+      background:#D32F2F;border:none;color:#fff;font-size:22px;cursor:pointer;
+      box-shadow:0 4px 16px rgba(211,47,47,.5);animation:pulse 2s infinite;z-index:500;
+    }
+    @keyframes pulse{0%,100%{box-shadow:0 4px 16px rgba(211,47,47,.5)}50%{box-shadow:0 4px 28px rgba(211,47,47,.8)}}
+
+    @media(max-width:640px){
+      .grid,.grid-3{grid-template-columns:1fr}
+      .stats-strip{grid-template-columns:1fr 1fr}
+      .profile-banner{flex-direction:column;text-align:center}
+    }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-left">
+    <button class="back-btn" onclick="history.back()">← Back</button>
+    <div class="header-title">🧾 Patient Profile</div>
+  </div>
+  <div class="header-right">
+    <button class="edit-btn" id="edit-btn" onclick="toggleEdit(true)">✏️ Edit</button>
+    <button class="save-btn" id="save-btn" onclick="saveProfile()">💾 Save Changes</button>
+  </div>
+</div>
+
+<div class="page">
+
+  <!-- Banner -->
+  <div class="profile-banner">
+    <div class="avatar" id="avatar-initials">?</div>
+    <div class="banner-info">
+      <h1 id="banner-name">Loading...</h1>
+      <p id="banner-sub">Patient Profile · MedBot Healthcare</p>
+      <div class="banner-tags" id="banner-tags"></div>
+    </div>
+  </div>
+
+  <!-- Stats strip -->
+  <div class="stats-strip">
+    <div class="stat-card blue"><div class="stat-num" id="stat-age">—</div><div class="stat-lbl">Age (yrs)</div></div>
+    <div class="stat-card green"><div class="stat-num" id="stat-bmi">—</div><div class="stat-lbl">BMI</div></div>
+    <div class="stat-card orange"><div class="stat-num" id="stat-conditions">0</div><div class="stat-lbl">Conditions</div></div>
+    <div class="stat-card purple"><div class="stat-num" id="stat-blood">—</div><div class="stat-lbl">Blood Group</div></div>
+  </div>
+
+  <!-- ── Basic Information ── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon icon-basic">👤</div>
+      <div>
+        <div class="section-title">Basic Information</div>
+        <div class="section-sub">Personal identification details</div>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="grid">
+        <div>
+          <div class="field-label">Full Name</div>
+          <div class="field-value" id="v-name"></div>
+          <input class="field-input" id="i-name" type="text" placeholder="Enter full name"/>
+        </div>
+        <div>
+          <div class="field-label">Age</div>
+          <div class="field-value" id="v-age"></div>
+          <input class="field-input" id="i-age" type="number" placeholder="Age in years"/>
+        </div>
+        <div>
+          <div class="field-label">Gender</div>
+          <div class="field-value" id="v-gender"></div>
+          <select class="field-input field-select" id="i-gender">
+            <option value="">Select gender</option>
+            <option>Male</option><option>Female</option><option>Other</option><option>Prefer not to say</option>
+          </select>
+        </div>
+        <div>
+          <div class="field-label">Date of Birth</div>
+          <div class="field-value" id="v-dob"></div>
+          <input class="field-input" id="i-dob" type="date"/>
+        </div>
+        <div>
+          <div class="field-label">Phone Number</div>
+          <div class="field-value" id="v-phone"></div>
+          <input class="field-input" id="i-phone" type="tel" placeholder="+91 98765 43210"/>
+        </div>
+        <div>
+          <div class="field-label">Email Address</div>
+          <div class="field-value" id="v-email"></div>
+          <input class="field-input" id="i-email" type="email" placeholder="you@example.com"/>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Physical Information ── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon icon-physical">📏</div>
+      <div>
+        <div class="section-title">Physical Information</div>
+        <div class="section-sub">Body measurements & vitals</div>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="grid-3">
+        <div>
+          <div class="field-label">Height (cm)</div>
+          <div class="field-value" id="v-height"></div>
+          <input class="field-input" id="i-height" type="number" placeholder="e.g. 170"/>
+        </div>
+        <div>
+          <div class="field-label">Weight (kg)</div>
+          <div class="field-value" id="v-weight"></div>
+          <input class="field-input" id="i-weight" type="number" placeholder="e.g. 65"/>
+        </div>
+        <div>
+          <div class="field-label">Blood Group</div>
+          <div class="field-value" id="v-blood"></div>
+          <select class="field-input field-select" id="i-blood">
+            <option value="">Select</option>
+            <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+            <option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Medical Information ── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon icon-medical">🩺</div>
+      <div>
+        <div class="section-title">Medical Information</div>
+        <div class="section-sub">Existing conditions & diagnoses</div>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="field-label" style="margin-bottom:12px">Existing Medical Conditions</div>
+
+      <!-- View mode -->
+      <div id="v-conditions" class="cond-tags"></div>
+
+      <!-- Edit mode -->
+      <div id="i-conditions-wrap" style="display:none">
+        <div class="conditions-grid">
+          <label class="cond-chip" id="chip-diabetes" onclick="toggleChip(this)">
+            <div class="cond-dot"></div><span class="cond-icon">🍬</span><span class="cond-label">Diabetes</span>
+          </label>
+          <label class="cond-chip" id="chip-hypertension" onclick="toggleChip(this)">
+            <div class="cond-dot"></div><span class="cond-icon">❤️</span><span class="cond-label">Hypertension</span>
+          </label>
+          <label class="cond-chip" id="chip-asthma" onclick="toggleChip(this)">
+            <div class="cond-dot"></div><span class="cond-icon">🫁</span><span class="cond-label">Asthma</span>
+          </label>
+          <label class="cond-chip" id="chip-heart" onclick="toggleChip(this)">
+            <div class="cond-dot"></div><span class="cond-icon">🫀</span><span class="cond-label">Heart Disease</span>
+          </label>
+          <label class="cond-chip" id="chip-other" onclick="toggleChip(this)">
+            <div class="cond-dot"></div><span class="cond-icon">➕</span><span class="cond-label">Other</span>
+          </label>
+        </div>
+        <div style="margin-top:12px">
+          <div class="field-label">Other / Additional Conditions</div>
+          <input class="field-input" id="i-other-condition" type="text" placeholder="Describe other conditions..." style="display:block;margin-top:6px"/>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Current Medications ── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon icon-meds">💊</div>
+      <div>
+        <div class="section-title">Current Medications</div>
+        <div class="section-sub">Medicines you are currently taking</div>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="field-label">Medications</div>
+      <div class="field-value" id="v-medications" style="min-height:60px"></div>
+      <textarea class="field-input" id="i-medications" rows="3" placeholder="List your current medications..." style="resize:vertical"></textarea>
+
+      <div style="margin-top:18px">
+        <div class="field-label">Allergies</div>
+        <div class="field-value" id="v-allergies"></div>
+        <input class="field-input" id="i-allergies" type="text" placeholder="Known allergies (medicines, food, etc.)"/>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Other Details ── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon icon-other">📋</div>
+      <div>
+        <div class="section-title">Other Details</div>
+        <div class="section-sub">Emergency contact & symptoms</div>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="grid">
+        <div>
+          <div class="field-label">Emergency Contact</div>
+          <div class="field-value" id="v-emergency"></div>
+          <input class="field-input" id="i-emergency" type="text" placeholder="Name & phone number"/>
+        </div>
+        <div>
+          <div class="field-label">Symptoms / Reason for Visit</div>
+          <div class="field-value" id="v-symptoms"></div>
+          <input class="field-input" id="i-symptoms" type="text" placeholder="Primary symptoms"/>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /page -->
+
+<!-- Toast -->
+<div class="toast" id="toast">✅ Profile saved successfully!</div>
+
+<!-- Emergency FAB -->
+<button class="emer-fab" onclick="document.getElementById('emer-modal').style.display='flex'" title="Emergency">🚨</button>
+<div id="emer-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9000;align-items:center;justify-content:center" onclick="if(event.target===this)this.style.display='none'">
+  <div style="background:#fff;border-radius:20px;padding:28px;max-width:400px;width:90%">
+    <h2 style="color:#C62828;margin-bottom:16px;font-size:18px">🚨 Emergency Contacts</h2>
+    <a href="tel:112" style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:10px;background:#FFEBEE;text-decoration:none;color:#C62828;font-weight:700;margin-bottom:8px">📞 112 — National Emergency</a>
+    <a href="tel:108" style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:10px;background:#FFF3E0;text-decoration:none;color:#E65100;font-weight:700;margin-bottom:8px">🚑 108 — Ambulance</a>
+    <a href="tel:102" style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:10px;background:#E8F5E9;text-decoration:none;color:#2E7D32;font-weight:700;margin-bottom:8px">🩺 102 — National Ambulance</a>
+    <a href="tel:104" style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:10px;background:#E3F2FD;text-decoration:none;color:#1565C0;font-weight:700">💊 104 — Medical Helpline</a>
+  </div>
+</div>
+
+<script>
+const KNOWN_CONDITIONS = ['Diabetes','Hypertension','Asthma','Heart Disease'];
+
+let patient = null;
+try { patient = JSON.parse(localStorage.getItem('medbot_patient') || 'null'); } catch {}
+if (!patient) { window.location.href = '/login'; }
+
+function display(id, val, fallback='Not provided'){
+  const el = document.getElementById(id);
+  if(val){ el.textContent = val; el.classList.remove('empty'); }
+  else { el.textContent = fallback; el.classList.add('empty'); }
+}
+
+function setInput(id, val){ const el=document.getElementById(id); if(el) el.value = val||''; }
+
+function calcBMI(h, w){
+  if(!h||!w) return '—';
+  const bmi = (parseFloat(w)/((parseFloat(h)/100)**2)).toFixed(1);
+  return isNaN(bmi)?'—':bmi;
+}
+
+function getInitials(name){
+  if(!name) return '?';
+  return name.trim().split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+}
+
+function parseConditions(raw){
+  if(!raw) return [];
+  return raw.split(',').map(s=>s.trim()).filter(Boolean);
+}
+
+function loadProfile(){
+  if(!patient) return;
+  const p = patient;
+
+  // Banner
+  document.getElementById('avatar-initials').textContent = getInitials(p.name);
+  document.getElementById('banner-name').textContent = p.name || 'Unknown Patient';
+
+  const tags = [];
+  if(p.age) tags.push(p.age + ' yrs');
+  if(p.gender) tags.push(p.gender);
+  if(p.blood_group) tags.push(p.blood_group);
+  document.getElementById('banner-tags').innerHTML = tags.map(t=>`<span class="tag">${t}</span>`).join('');
+
+  // Stats
+  document.getElementById('stat-age').textContent = p.age || '—';
+  document.getElementById('stat-bmi').textContent = calcBMI(p.height, p.weight);
+  document.getElementById('stat-blood').textContent = p.blood_group || '—';
+
+  const conds = parseConditions(p.medical_conditions);
+  document.getElementById('stat-conditions').textContent = conds.length;
+
+  // Basic
+  display('v-name', p.name);
+  display('v-age', p.age ? p.age + ' years' : '');
+  display('v-gender', p.gender);
+  display('v-dob', p.dob ? new Date(p.dob).toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'}) : '');
+  display('v-phone', p.phone);
+  display('v-email', p.email);
+
+  // Physical
+  display('v-height', p.height ? p.height + ' cm' : '');
+  display('v-weight', p.weight ? p.weight + ' kg' : '');
+  display('v-blood', p.blood_group);
+
+  // Conditions view
+  const condEl = document.getElementById('v-conditions');
+  if(conds.length){
+    condEl.innerHTML = conds.map(c=>`<span class="cond-tag">${c}</span>`).join('');
+  } else {
+    condEl.innerHTML = '<span class="cond-tag none">No conditions listed</span>';
+  }
+
+  // Medications / Allergies
+  display('v-medications', p.medications);
+  display('v-allergies', p.allergies);
+
+  // Other
+  display('v-emergency', p.emergency_contact);
+  display('v-symptoms', p.symptoms);
+
+  // Pre-fill inputs
+  setInput('i-name', p.name);
+  setInput('i-age', p.age);
+  if(p.gender){ const sel=document.getElementById('i-gender'); for(let o of sel.options) if(o.text===p.gender){o.selected=true;break;} }
+  setInput('i-dob', p.dob);
+  setInput('i-phone', p.phone);
+  setInput('i-email', p.email);
+  setInput('i-height', p.height);
+  setInput('i-weight', p.weight);
+  if(p.blood_group){ const sel=document.getElementById('i-blood'); for(let o of sel.options) if(o.text===p.blood_group){o.selected=true;break;} }
+  setInput('i-medications', p.medications);
+  setInput('i-allergies', p.allergies);
+  setInput('i-emergency', p.emergency_contact);
+  setInput('i-symptoms', p.symptoms);
+
+  // Condition chips
+  conds.forEach(c => {
+    if(c==='Diabetes') setChip('chip-diabetes', true);
+    else if(c==='Hypertension') setChip('chip-hypertension', true);
+    else if(c==='Asthma') setChip('chip-asthma', true);
+    else if(c==='Heart Disease') setChip('chip-heart', true);
+    else { setChip('chip-other', true); setInput('i-other-condition', c); }
+  });
+}
+
+function setChip(id, checked){
+  const chip = document.getElementById(id);
+  if(!chip) return;
+  if(checked) chip.classList.add('checked');
+  else chip.classList.remove('checked');
+}
+
+function toggleChip(chip){ chip.classList.toggle('checked'); }
+
+function toggleEdit(on){
+  document.querySelectorAll('.field-value').forEach(el => el.style.display = on ? 'none' : '');
+  document.querySelectorAll('.field-input').forEach(el => el.style.display = on ? 'block' : 'none');
+  document.getElementById('v-conditions').style.display = on ? 'none' : '';
+  document.getElementById('i-conditions-wrap').style.display = on ? 'block' : 'none';
+  document.getElementById('edit-btn').style.display = on ? 'none' : '';
+  document.getElementById('save-btn').style.display = on ? 'inline-block' : 'none';
+}
+
+function getSelectedConditions(){
+  const conds = [];
+  if(document.getElementById('chip-diabetes').classList.contains('checked')) conds.push('Diabetes');
+  if(document.getElementById('chip-hypertension').classList.contains('checked')) conds.push('Hypertension');
+  if(document.getElementById('chip-asthma').classList.contains('checked')) conds.push('Asthma');
+  if(document.getElementById('chip-heart').classList.contains('checked')) conds.push('Heart Disease');
+  if(document.getElementById('chip-other').classList.contains('checked')){
+    const other = document.getElementById('i-other-condition').value.trim();
+    if(other) conds.push(other);
+  }
+  return conds.join(', ');
+}
+
+async function saveProfile(){
+  const updated = {
+    ...patient,
+    name:               document.getElementById('i-name').value.trim(),
+    age:                document.getElementById('i-age').value.trim(),
+    gender:             document.getElementById('i-gender').value,
+    dob:                document.getElementById('i-dob').value,
+    phone:              document.getElementById('i-phone').value.trim(),
+    email:              document.getElementById('i-email').value.trim(),
+    height:             document.getElementById('i-height').value.trim(),
+    weight:             document.getElementById('i-weight').value.trim(),
+    blood_group:        document.getElementById('i-blood').value,
+    medical_conditions: getSelectedConditions(),
+    medications:        document.getElementById('i-medications').value.trim(),
+    allergies:          document.getElementById('i-allergies').value.trim(),
+    emergency_contact:  document.getElementById('i-emergency').value.trim(),
+    symptoms:           document.getElementById('i-symptoms').value.trim(),
+  };
+
+  localStorage.setItem('medbot_patient', JSON.stringify(updated));
+  patient = updated;
+
+  try {
+    await fetch('/patient/register', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(updated),
+    });
+  } catch {}
+
+  loadProfile();
+  toggleEdit(false);
+
+  const t = document.getElementById('toast');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+loadProfile();
+</script>
+</body>
+</html>

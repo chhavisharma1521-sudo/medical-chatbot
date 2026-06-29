@@ -1,0 +1,22 @@
+# Environment — never commit secrets
+.env
+
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Runtime data (SQLite databases, uploads)
+data/
+*.db
+
+# Large ML model cache
+.cache/
+sentence_transformers/
+
+# IDE
+.vscode/
+.idea/

@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Secure Messaging — MedBot</title>
+  <style>
+    :root{
+      --blue:#1565C0;--blue-l:#1E88E5;--blue-d:#0D47A1;
+      --bg:#F0F4F9;--white:#fff;--text:#1A1A2E;--muted:#607D8B;
+      --border:#DCE4F0;--sidebar:#0D47A1;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%;font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg)}
+    .app{display:flex;height:100vh}
+
+    /* ── Sidebar ── */
+    .sidebar{
+      width:300px;min-width:300px;background:var(--sidebar);
+      display:flex;flex-direction:column;overflow:hidden;
+    }
+    .s-brand{padding:22px 20px 16px;border-bottom:1px solid rgba(255,255,255,.12)}
+    .s-brand-icon{font-size:28px}
+    .s-brand-name{font-size:18px;font-weight:700;color:#fff;margin-top:6px}
+    .s-brand-sub{font-size:11px;color:rgba(255,255,255,.5)}
+
+    .s-identity{padding:12px 16px;background:rgba(255,255,255,.07);margin:10px 14px;border-radius:10px}
+    .s-identity label{display:block;font-size:10px;font-weight:700;color:rgba(255,255,255,.45);
+      text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px}
+    .s-identity input,.s-identity select{
+      width:100%;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);
+      border-radius:6px;padding:7px 10px;color:#fff;font-size:13px;outline:none;
+    }
+    .s-identity input::placeholder{color:rgba(255,255,255,.4)}
+    .s-identity select option{color:var(--text)}
+    .s-load-btn{
+      width:100%;margin-top:8px;padding:7px;background:rgba(255,255,255,.18);
+      border:1px solid rgba(255,255,255,.25);border-radius:6px;color:#fff;
+      font-size:12px;font-weight:600;cursor:pointer;
+    }
+    .s-load-btn:hover{background:rgba(255,255,255,.28)}
+
+    .compose-btn{
+      margin:0 14px 12px;padding:10px;background:rgba(255,255,255,.15);
+      border:1px solid rgba(255,255,255,.25);border-radius:10px;
+      color:#fff;font-size:13px;font-weight:700;cursor:pointer;text-align:center;
+      transition:.18s;
+    }
+    .compose-btn:hover{background:rgba(255,255,255,.25)}
+
+    .inbox-list{flex:1;overflow-y:auto;padding:8px 10px}
+    .inbox-list::-webkit-scrollbar{width:4px}
+    .inbox-list::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:4px}
+
+    .inbox-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;
+      color:rgba(255,255,255,.35);padding:8px 8px 4px}
+
+    .msg-thread{
+      padding:10px 12px;border-radius:8px;cursor:pointer;margin-bottom:3px;
+      border:1px solid transparent;transition:.18s;
+    }
+    .msg-thread:hover{background:rgba(255,255,255,.1)}
+    .msg-thread.active{background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.2)}
+    .msg-thread.unread .mt-subject{font-weight:700}
+    .mt-subject{font-size:13px;color:rgba(255,255,255,.9);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .mt-meta{font-size:10.5px;color:rgba(255,255,255,.45);margin-top:3px;display:flex;justify-content:space-between}
+    .mt-badge{background:#ef4444;color:#fff;border-radius:20px;font-size:9px;padding:1px 5px;font-weight:700}
+
+    .empty-inbox{padding:30px 16px;text-align:center;font-size:12px;color:rgba(255,255,255,.35);line-height:1.7}
+
+    /* ── Main area ── */
+    .main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+
+    .main-header{
+      background:#fff;border-bottom:1px solid var(--border);
+      padding:14px 24px;display:flex;align-items:center;gap:12px;
+      box-shadow:0 1px 6px rgba(0,0,0,.06);flex-shrink:0;
+    }
+    .main-header h2{font-size:15px;font-weight:700;color:var(--text)}
+    .main-header p{font-size:12px;color:var(--muted)}
+    .header-actions{margin-left:auto;display:flex;gap:8px}
+    .hdr-btn{
+      padding:6px 14px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);
+      background:var(--bg);color:var(--muted);
+    }
+    .hdr-btn.primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+    .hdr-btn:hover{background:var(--border)}
+    .hdr-btn.primary:hover{background:var(--blue-l)}
+
+    .thread-view{flex:1;overflow-y:auto;padding:24px}
+    .thread-view::-webkit-scrollbar{width:5px}
+    .thread-view::-webkit-scrollbar-thumb{background:#CBD5E0;border-radius:4px}
+
+    .empty-state{
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      height:100%;gap:14px;color:var(--muted);
+    }
+    .empty-state .icon{font-size:56px;opacity:.35}
+    .empty-state h3{font-size:16px;font-weight:600}
+    .empty-state p{font-size:13px;text-align:center;max-width:300px;line-height:1.6}
+
+    .msg-bubble-wrap{margin-bottom:18px;display:flex;flex-direction:column}
+    .msg-bubble-wrap.sent{align-items:flex-end}
+    .msg-bubble-wrap.recv{align-items:flex-start}
+    .msg-sender{font-size:11px;font-weight:600;color:var(--muted);margin-bottom:4px;padding:0 4px}
+    .msg-bubble{
+      max-width:65%;padding:12px 16px;border-radius:16px;font-size:14px;line-height:1.6;
+      word-break:break-word;
+    }
+    .sent .msg-bubble{background:var(--blue);color:#fff;border-top-right-radius:4px}
+    .recv .msg-bubble{background:#fff;border:1px solid var(--border);color:var(--text);border-top-left-radius:4px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+    .msg-time{font-size:10px;color:var(--muted);margin-top:4px;padding:0 4px}
+
+    .reply-bar{
+      background:#fff;border-top:1px solid var(--border);padding:14px 20px;flex-shrink:0;
+    }
+    .reply-row{display:flex;gap:10px;align-items:flex-end}
+    .reply-row textarea{
+      flex:1;border:1.5px solid var(--border);border-radius:10px;padding:10px 14px;
+      font-size:14px;font-family:inherit;resize:none;outline:none;max-height:100px;
+      color:var(--text);
+    }
+    .reply-row textarea:focus{border-color:var(--blue-l)}
+    .reply-send-btn{
+      background:var(--blue);color:#fff;border:none;border-radius:10px;
+      padding:10px 18px;font-size:14px;cursor:pointer;flex-shrink:0;
+    }
+    .reply-send-btn:hover{background:var(--blue-l)}
+
+    /* ── Compose Modal ── */
+    .modal-overlay{
+      position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;
+      align-items:center;justify-content:center;z-index:999;
+    }
+    .modal-overlay.hidden{display:none}
+    .modal{
+      background:#fff;border-radius:16px;padding:28px;width:520px;max-width:95vw;
+      box-shadow:0 20px 60px rgba(0,0,0,.2);
+    }
+    .modal h3{font-size:16px;font-weight:700;color:var(--text);margin-bottom:18px}
+    .modal-field{margin-bottom:14px}
+    .modal-field label{display:block;font-size:11px;font-weight:700;color:var(--muted);
+      text-transform:uppercase;letter-spacing:.7px;margin-bottom:5px}
+    .modal-field input,.modal-field textarea{
+      width:100%;padding:9px 13px;border:1.5px solid var(--border);border-radius:8px;
+      font-size:14px;color:var(--text);outline:none;font-family:inherit;
+    }
+    .modal-field input:focus,.modal-field textarea:focus{border-color:var(--blue-l)}
+    .modal-field textarea{min-height:100px;resize:vertical}
+    .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
+    .modal-cancel{
+      padding:9px 20px;border:1.5px solid var(--border);border-radius:8px;
+      background:var(--bg);color:var(--muted);font-size:13px;cursor:pointer;
+    }
+    .modal-send-btn{
+      padding:9px 22px;background:var(--blue);color:#fff;border:none;
+      border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;
+    }
+    .modal-send-btn:hover{background:var(--blue-l)}
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ════════════ SIDEBAR ════════════ -->
+  <aside class="sidebar">
+    <div class="s-brand">
+      <div class="s-brand-icon">✉️</div>
+      <div class="s-brand-name">Secure Messages</div>
+      <div class="s-brand-sub">Patient ↔ Doctor Messaging</div>
+    </div>
+
+    <!-- Identity -->
+    <div class="s-identity">
+      <label>Your Name</label>
+      <input id="my-name" placeholder="Enter your name…"/>
+      <label style="margin-top:8px">Your Role</label>
+      <select id="my-role"><option value="patient">Patient</option><option value="doctor">Doctor</option></select>
+      <button class="s-load-btn" onclick="loadInbox()">Load My Inbox</button>
+    </div>
+
+    <button class="compose-btn" onclick="openCompose()">✏️ Compose New Message</button>
+
+    <div class="inbox-label">Inbox</div>
+    <div class="inbox-list" id="inbox-list">
+      <div class="empty-inbox">Enter your name above and click<br><strong>Load My Inbox</strong> to see messages.</div>
+    </div>
+  </aside>
+
+  <!-- ════════════ MAIN ════════════ -->
+  <div class="main">
+
+    <!-- Header -->
+    <div class="main-header" id="main-header">
+      <div style="font-size:28px">💬</div>
+      <div>
+        <div class="main-header" style="border:none;padding:0;box-shadow:none;background:none">
+          <div>
+            <h2 id="thread-title">Select a conversation</h2>
+            <p id="thread-sub">Your messages will appear here</p>
+          </div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="hdr-btn" onclick="loadInbox()">↻ Refresh</button>
+        <button class="hdr-btn primary" onclick="openCompose()">✏️ New</button>
+      </div>
+    </div>
+
+    <!-- Thread -->
+    <div class="thread-view" id="thread-view">
+      <div class="empty-state">
+        <div class="icon">✉️</div>
+        <h3>No conversation selected</h3>
+        <p>Select a conversation from the left panel or compose a new message to get started.</p>
+      </div>
+    </div>
+
+    <!-- Reply bar (hidden until thread selected) -->
+    <div class="reply-bar" id="reply-bar" style="display:none">
+      <div class="reply-row">
+        <textarea id="reply-input" rows="2" placeholder="Type your reply…"></textarea>
+        <button class="reply-send-btn" onclick="sendReply()">Send</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ════════════ COMPOSE MODAL ════════════ -->
+<div class="modal-overlay hidden" id="compose-modal">
+  <div class="modal">
+    <h3>✏️ New Message</h3>
+    <div class="modal-field"><label>To (Recipient Name)</label><input id="c-to" placeholder="Doctor or Patient full name"/></div>
+    <div class="modal-field"><label>Subject</label><input id="c-subject" placeholder="Brief subject…"/></div>
+    <div class="modal-field"><label>Message</label><textarea id="c-body" placeholder="Write your message here…"></textarea></div>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeCompose()">Cancel</button>
+      <button class="modal-send-btn" onclick="sendNewMessage()">Send Message</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let myName = '', myRole = 'patient';
+let allMessages = [];
+let activeThreadId = null;
+
+// ── Inbox ─────────────────────────────────────────────────
+async function loadInbox(){
+  myName = document.getElementById('my-name').value.trim();
+  myRole = document.getElementById('my-role').value;
+  if(!myName){ alert('Please enter your name first'); return; }
+
+  const res = await fetch(`/api/messages?user=${encodeURIComponent(myName)}`);
+  allMessages = await res.json();
+
+  renderInbox();
+}
+
+function renderInbox(){
+  const list = document.getElementById('inbox-list');
+  if(!allMessages.length){
+    list.innerHTML = '<div class="empty-inbox">No messages yet.<br>Compose a new message to start.</div>';
+    return;
+  }
+
+  // Group by thread_id
+  const threads = {};
+  allMessages.forEach(m => {
+    const tid = m.thread_id || m.id;
+    if(!threads[tid]) threads[tid] = [];
+    threads[tid].push(m);
+  });
+
+  const threadArr = Object.entries(threads).sort((a,b) => {
+    const la = a[1][a[1].length-1].timestamp;
+    const lb = b[1][b[1].length-1].timestamp;
+    return lb.localeCompare(la);
+  });
+
+  list.innerHTML = threadArr.map(([tid, msgs]) => {
+    const last = msgs[msgs.length-1];
+    const unread = msgs.some(m => !m.is_read && m.sender_name !== myName);
+    const subj = (msgs[0].subject || '(No subject)').slice(0,34);
+    const preview = last.body.slice(0,40) + (last.body.length>40?'…':'');
+    const time = relTime(last.timestamp);
+    return `
+      <div class="msg-thread ${activeThreadId===tid?'active':''} ${unread?'unread':''}"
+           onclick="openThread('${tid}')">
+        <div class="mt-subject">${esc(subj)} ${unread?'<span class="mt-badge">New</span>':''}</div>
+        <div class="mt-meta">
+          <span>${esc(last.sender_name)}: ${esc(preview)}</span>
+          <span>${time}</span>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function openThread(tid){
+  activeThreadId = tid;
+  renderInbox();
+
+  const msgs = allMessages.filter(m => (m.thread_id || m.id) == tid);
+  if(!msgs.length) return;
+
+  const first = msgs[0];
+  document.getElementById('thread-title').textContent = first.subject || '(No subject)';
+  const other = msgs.find(m => m.sender_name !== myName);
+  document.getElementById('thread-sub').textContent = other
+    ? `Conversation with ${other.sender_name} (${other.sender_role})`
+    : `Conversation`;
+
+  const view = document.getElementById('thread-view');
+  view.innerHTML = '';
+
+  msgs.forEach(m => {
+    const isSent = m.sender_name === myName;
+    const div = document.createElement('div');
+    div.className = `msg-bubble-wrap ${isSent ? 'sent' : 'recv'}`;
+    const time = new Date(m.timestamp).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    div.innerHTML = `
+      <div class="msg-sender">${esc(m.sender_name)} · ${esc(m.sender_role)}</div>
+      <div class="msg-bubble">${esc(m.body).replace(/\n/g,'<br>')}</div>
+      <div class="msg-time">${time}</div>
+    `;
+    view.appendChild(div);
+    // Mark as read
+    if(!m.is_read && !isSent){
+      fetch(`/api/messages/${m.id}/read`,{method:'PATCH'});
+      m.is_read = 1;
+    }
+  });
+
+  view.scrollTop = view.scrollHeight;
+  document.getElementById('reply-bar').style.display = 'block';
+}
+
+async function sendReply(){
+  const body = document.getElementById('reply-input').value.trim();
+  if(!body || !activeThreadId) return;
+  if(!myName){ alert('Set your name first'); return; }
+
+  const msgs = allMessages.filter(m => (m.thread_id || m.id) == activeThreadId);
+  const first = msgs[0];
+  const recipient = msgs.find(m => m.sender_name !== myName);
+
+  const payload = {
+    sender_name: myName,
+    sender_role: myRole,
+    recipient_name: recipient ? recipient.sender_name : '',
+    subject: first ? first.subject : '',
+    body,
+    thread_id: activeThreadId,
+  };
+  const res = await fetch('/api/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  const newMsg = await res.json();
+  allMessages.push(newMsg);
+
+  document.getElementById('reply-input').value = '';
+  openThread(activeThreadId);
+}
+
+document.getElementById('reply-input').addEventListener('keydown', e => {
+  if(e.key === 'Enter' && e.ctrlKey){ sendReply(); }
+});
+
+// ── Compose ───────────────────────────────────────────────
+function openCompose(){
+  if(!myName){ alert('Enter your name first'); return; }
+  document.getElementById('compose-modal').classList.remove('hidden');
+}
+function closeCompose(){
+  document.getElementById('compose-modal').classList.add('hidden');
+}
+
+async function sendNewMessage(){
+  const to      = document.getElementById('c-to').value.trim();
+  const subject = document.getElementById('c-subject').value.trim();
+  const body    = document.getElementById('c-body').value.trim();
+
+  if(!to || !body){ alert('Fill in recipient and message'); return; }
+  if(!myName){ alert('Enter your name first'); return; }
+
+  const payload = {
+    sender_name: myName, sender_role: myRole,
+    recipient_name: to, subject, body, thread_id: '',
+  };
+  const res = await fetch('/api/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  const newMsg = await res.json();
+  allMessages.unshift(newMsg);
+  closeCompose();
+  renderInbox();
+  openThread(newMsg.thread_id || newMsg.id);
+
+  document.getElementById('c-to').value = '';
+  document.getElementById('c-subject').value = '';
+  document.getElementById('c-body').value = '';
+}
+
+// ── Helpers ───────────────────────────────────────────────
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function relTime(iso){
+  const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+  if(m < 1) return 'just now';
+  if(m < 60) return `${m}m ago`;
+  const h = Math.floor(m/60);
+  if(h < 24) return `${h}h ago`;
+  return new Date(iso).toLocaleDateString();
+}
+
+// Close modal on overlay click
+document.getElementById('compose-modal').addEventListener('click', e => {
+  if(e.target === document.getElementById('compose-modal')) closeCompose();
+});
+</script>
+</body>
+</html>

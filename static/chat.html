@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MedBot — AI Medical Assistant</title>
+  <style>
+    :root {
+      --blue:#1565C0; --blue-light:#1E88E5; --blue-dark:#0D47A1;
+      --bg:#F0F4FF; --sidebar-bg:#0D47A1;
+      --white:#FFFFFF; --text:#1A1A2E; --muted:#607D8B;
+      --border:#DCE4F0; --shadow:0 4px 24px rgba(13,71,161,.12);
+      --grad:linear-gradient(135deg,#1565C0,#0D47A1);
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%;font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);overflow:hidden}
+
+    /* ── Layout ── */
+    .app{display:flex;height:100vh;width:100vw}
+
+    /* ── Sidebar ── */
+    .sidebar{
+      width:290px;min-width:290px;background:var(--sidebar-bg);
+      display:flex;flex-direction:column;overflow:hidden;
+      box-shadow:4px 0 20px rgba(0,0,0,.15);
+    }
+
+    .brand{padding:22px 22px 16px;border-bottom:1px solid rgba(255,255,255,.1)}
+    .brand-row{display:flex;align-items:center;gap:12px}
+    .brand-icon{
+      width:46px;height:46px;border-radius:14px;
+      background:linear-gradient(135deg,rgba(255,255,255,.25),rgba(255,255,255,.1));
+      display:flex;align-items:center;justify-content:center;font-size:24px;
+      box-shadow:0 2px 10px rgba(0,0,0,.2);flex-shrink:0;
+    }
+    .brand-name{font-size:19px;font-weight:800;color:#fff;letter-spacing:-.3px}
+    .brand-sub{font-size:11px;color:rgba(255,255,255,.5);margin-top:2px}
+
+    /* Patient chip */
+    .patient-chip{
+      margin:14px 16px;background:rgba(255,255,255,.08);border-radius:12px;
+      padding:12px 14px;border:1px solid rgba(255,255,255,.1);
+    }
+    .pc-label{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.4);margin-bottom:6px}
+    .pc-name{font-size:14px;font-weight:700;color:#fff}
+    .pc-detail{font-size:11px;color:rgba(255,255,255,.55);margin-top:2px}
+    .pc-symptom{font-size:11px;color:rgba(255,255,255,.45);margin-top:6px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+    /* Status */
+    .s-section{padding:10px 18px;border-bottom:1px solid rgba(255,255,255,.07)}
+    .status-row{display:flex;align-items:center;gap:8px}
+    .dot{width:8px;height:8px;background:#4CAF50;border-radius:50%;box-shadow:0 0 0 3px rgba(76,175,80,.25);animation:pulse 2s infinite;flex-shrink:0}
+    @keyframes pulse{0%,100%{box-shadow:0 0 0 3px rgba(76,175,80,.25)}50%{box-shadow:0 0 0 6px rgba(76,175,80,.08)}}
+    .status-txt{font-size:12.5px;color:rgba(255,255,255,.8);font-weight:500}
+
+    /* History */
+    .s-history{flex:1;min-height:0;overflow-y:auto;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.07)}
+    .s-history::-webkit-scrollbar{width:4px}
+    .s-history::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:4px}
+    .s-label-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding:0 4px}
+    .s-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:rgba(255,255,255,.35)}
+    .new-chat-btn{
+      background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);
+      border-radius:6px;padding:3px 10px;color:rgba(255,255,255,.8);
+      font-size:11px;font-weight:600;cursor:pointer;transition:.18s;
+    }
+    .new-chat-btn:hover{background:rgba(255,255,255,.2)}
+    .hist-empty{font-size:12px;color:rgba(255,255,255,.3);text-align:center;padding:20px 0;line-height:1.7}
+    .hist-item{
+      display:flex;align-items:center;gap:6px;padding:9px 10px;
+      border-radius:10px;cursor:pointer;transition:.18s;margin-bottom:3px;border:1px solid transparent;
+    }
+    .hist-item:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.1)}
+    .hist-item.active{background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.2)}
+    .hist-dot{width:6px;height:6px;background:rgba(255,255,255,.3);border-radius:50%;flex-shrink:0}
+    .hist-content{flex:1;min-width:0}
+    .hist-title{font-size:12.5px;color:rgba(255,255,255,.85);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .hist-time{font-size:10px;color:rgba(255,255,255,.35);margin-top:1px}
+    .hist-del{background:none;border:none;color:rgba(255,255,255,.2);cursor:pointer;font-size:13px;padding:3px;border-radius:4px;opacity:0;transition:.15s}
+    .hist-item:hover .hist-del{opacity:1}
+    .hist-del:hover{background:rgba(255,60,60,.25);color:#ff9090}
+
+    /* Book appointment button */
+    .book-btn{
+      margin:0 14px 6px;display:flex;align-items:center;gap:10px;
+      padding:12px 16px;border-radius:12px;cursor:pointer;transition:.2s;
+      background:linear-gradient(135deg,#43A047,#2E7D32);
+      border:none;color:#fff;font-size:13.5px;font-weight:700;
+      box-shadow:0 4px 14px rgba(46,125,50,.35);text-decoration:none;
+    }
+    .book-btn:hover{box-shadow:0 6px 20px rgba(46,125,50,.5);transform:translateY(-1px)}
+    .book-btn-icon{font-size:20px;flex-shrink:0}
+    .profile-btn{
+      margin:0 14px 10px;display:flex;align-items:center;gap:10px;
+      padding:11px 16px;border-radius:12px;cursor:pointer;transition:.2s;
+      background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.2);
+      color:#fff;font-size:13px;font-weight:600;text-decoration:none;
+    }
+    .profile-btn:hover{background:rgba(255,255,255,.18)}
+
+    .disclaimer{padding:12px 16px;background:rgba(0,0,0,.15);font-size:10.5px;color:rgba(255,255,255,.38);line-height:1.65;flex-shrink:0}
+    .disclaimer strong{color:rgba(255,255,255,.55)}
+
+    /* ── Chat area ── */
+    .chat-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
+
+    /* Topbar */
+    .topbar{
+      background:var(--white);border-bottom:1px solid var(--border);
+      padding:0 24px;height:62px;display:flex;align-items:center;gap:12px;
+      box-shadow:0 2px 12px rgba(13,71,161,.07);flex-shrink:0;
+    }
+    .top-avatar{
+      width:40px;height:40px;background:var(--grad);border-radius:50%;
+      display:flex;align-items:center;justify-content:center;font-size:20px;
+      flex-shrink:0;box-shadow:0 3px 10px rgba(13,71,161,.3);
+    }
+    .top-name{font-size:15px;font-weight:700;color:var(--text)}
+    .top-sub{font-size:11.5px;color:var(--muted);margin-top:1px}
+    .top-badge{
+      margin-left:auto;background:linear-gradient(135deg,#E8F5E9,#F1F8E9);
+      color:#2E7D32;font-size:11px;font-weight:700;
+      padding:5px 14px;border-radius:20px;border:1px solid #C8E6C9;
+      box-shadow:0 2px 8px rgba(46,125,50,.1);
+    }
+
+    /* Messages */
+    .messages{flex:1;overflow-y:auto;padding:22px 26px;display:flex;flex-direction:column;gap:16px;scroll-behavior:smooth}
+    .messages::-webkit-scrollbar{width:5px}
+    .messages::-webkit-scrollbar-thumb{background:#C5D0E0;border-radius:4px}
+    .messages::-webkit-scrollbar-track{background:transparent}
+
+    .msg{display:flex;gap:10px;animation:msgIn .25s ease;max-width:100%}
+    @keyframes msgIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+    .msg.user{flex-direction:row-reverse}
+    .avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;margin-top:2px}
+    .avatar.bot{background:linear-gradient(135deg,#E3F2FD,#BBDEFB);box-shadow:0 2px 8px rgba(21,101,192,.15)}
+    .avatar.user-av{background:var(--grad);box-shadow:0 2px 8px rgba(13,71,161,.3)}
+    .msg-col{display:flex;flex-direction:column;gap:3px;max-width:66%}
+    .msg.user .msg-col{align-items:flex-end}
+    .msg-label{font-size:10.5px;font-weight:700;color:var(--muted);padding:0 4px;text-transform:uppercase;letter-spacing:.6px}
+    .bubble{
+      padding:13px 17px;border-radius:18px;font-size:14px;line-height:1.65;word-break:break-word;
+    }
+    .msg.bot .bubble{
+      background:var(--white);border:1px solid var(--border);border-top-left-radius:5px;
+      color:var(--text);box-shadow:0 3px 12px rgba(13,71,161,.06);
+    }
+    .msg.user .bubble{
+      background:var(--grad);color:#fff;border-top-right-radius:5px;
+      box-shadow:0 4px 14px rgba(13,71,161,.25);
+    }
+    .msg-time{font-size:10px;color:var(--muted);padding:0 4px}
+
+    .typing-dots{display:flex;gap:5px;align-items:center;padding:3px 0}
+    .typing-dots span{width:9px;height:9px;background:#90CAF9;border-radius:50%;animation:bounce 1.3s infinite}
+    .typing-dots span:nth-child(2){animation-delay:.22s}
+    .typing-dots span:nth-child(3){animation-delay:.44s}
+    @keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-7px)}}
+
+    /* Welcome card */
+    .welcome-card{
+      background:var(--grad);border-radius:18px;padding:24px 26px;color:#fff;
+      box-shadow:0 10px 32px rgba(13,71,161,.22);position:relative;overflow:hidden;
+    }
+    .welcome-card::after{
+      content:'⚕️';position:absolute;right:20px;bottom:-10px;font-size:80px;opacity:.08;
+    }
+    .welcome-card h2{font-size:19px;font-weight:800;margin-bottom:7px}
+    .welcome-card p{font-size:13px;opacity:.85;line-height:1.65;max-width:420px}
+
+    /* Suggestion cards */
+    .suggestions-wrap{display:flex;flex-direction:column;gap:12px;margin-top:2px}
+    .suggestions-label{font-size:13px;font-weight:600;color:var(--muted);text-align:center}
+    .suggestion-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+    .suggest-card{
+      background:var(--white);border:1.5px solid var(--border);border-radius:14px;
+      padding:16px;cursor:pointer;transition:.22s;font-size:13px;color:var(--text);
+      text-align:left;line-height:1.5;box-shadow:0 2px 10px rgba(13,71,161,.06);
+    }
+    .suggest-card:hover{
+      border-color:var(--blue-light);background:#EEF4FF;
+      transform:translateY(-3px);box-shadow:0 8px 24px rgba(30,136,229,.15);
+    }
+    .suggest-icon{font-size:22px;margin-bottom:7px;display:block}
+
+    /* Input area */
+    .input-wrap{background:var(--white);border-top:1px solid var(--border);padding:12px 24px 16px;flex-shrink:0;box-shadow:0 -2px 12px rgba(13,71,161,.05)}
+    .img-preview-wrap{display:none;align-items:center;gap:10px;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:8px 12px;margin-bottom:8px}
+    .img-preview-wrap.show{display:flex}
+    .img-preview-thumb{width:48px;height:48px;object-fit:cover;border-radius:7px;border:1px solid var(--border)}
+    .img-preview-name{flex:1;font-size:12.5px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .img-remove-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;padding:2px 4px;border-radius:4px}
+    .img-remove-btn:hover{color:#EF5350;background:#FFF0F0}
+    .input-box{
+      display:flex;gap:8px;align-items:flex-end;
+      background:var(--bg);border:2px solid var(--border);border-radius:16px;
+      padding:8px 8px 8px 14px;transition:.2s;
+    }
+    .input-box:focus-within{border-color:var(--blue-light);box-shadow:0 0 0 4px rgba(30,136,229,.08);background:#fff}
+    .input-box textarea{flex:1;border:none;background:transparent;font-size:14px;font-family:inherit;resize:none;outline:none;line-height:1.55;max-height:120px;color:var(--text)}
+    .input-box textarea::placeholder{color:#9AA5B1}
+    .action-btn{width:38px;height:38px;border-radius:10px;background:transparent;border:1.5px solid var(--border);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;transition:.18s}
+    .action-btn:hover{background:#EEF4FF;border-color:var(--blue-light);color:var(--blue)}
+    .action-btn.recording{background:#FFF0F0;border-color:#EF5350;color:#EF5350;animation:recPulse 1s infinite}
+    @keyframes recPulse{0%,100%{opacity:1}50%{opacity:.45}}
+    .send-btn{
+      width:40px;height:40px;border-radius:12px;background:var(--grad);color:#fff;
+      border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;
+      font-size:18px;flex-shrink:0;transition:.18s;box-shadow:0 3px 12px rgba(13,71,161,.3);
+    }
+    .send-btn:hover{box-shadow:0 5px 18px rgba(13,71,161,.4);transform:translateY(-1px)}
+    .send-btn:active{transform:scale(.93)}
+    .send-btn:disabled{background:#B0BEC5;box-shadow:none;cursor:not-allowed}
+    .input-hint{font-size:11px;color:var(--muted);margin-top:7px;text-align:center}
+    .chat-img{max-width:220px;max-height:160px;border-radius:10px;margin-bottom:5px;display:block;cursor:zoom-in;border:1px solid rgba(255,255,255,.25)}
+    .chat-img.zoomed{max-width:100%;max-height:none;cursor:zoom-out}
+
+    /* New chat button in topbar */
+    .new-chat-top{
+      padding:6px 14px;border:1.5px solid var(--border);border-radius:8px;
+      background:#fff;color:var(--muted);font-size:12.5px;font-weight:600;cursor:pointer;transition:.15s;
+    }
+    .new-chat-top:hover{border-color:var(--blue-light);color:var(--blue)}
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ══ SIDEBAR ══ -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-row">
+        <div class="brand-icon">⚕️</div>
+        <div>
+          <div class="brand-name">MedBot</div>
+          <div class="brand-sub">AI-Powered Medical Assistant</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Patient info chip -->
+    <div class="patient-chip" id="patient-chip" style="display:none">
+      <div class="pc-label">Current Patient</div>
+      <div class="pc-name" id="pc-name">—</div>
+      <div class="pc-detail" id="pc-detail">—</div>
+      <div class="pc-symptom" id="pc-symptom"></div>
+    </div>
+
+    <div class="s-section">
+      <div class="status-row">
+        <div class="dot"></div>
+        <div class="status-txt">Online &amp; Ready</div>
+      </div>
+    </div>
+
+    <div class="s-history">
+      <div class="s-label-row">
+        <span class="s-label">Chat History</span>
+        <button class="new-chat-btn" onclick="newChat()">+ New Chat</button>
+      </div>
+      <div id="history-list">
+        <div class="hist-empty">No conversations yet.<br>Ask your first question!</div>
+      </div>
+    </div>
+
+    <a href="/appointments" class="book-btn">
+      <span class="book-btn-icon">📅</span>
+      <span>Book Appointment</span>
+    </a>
+    <a href="/patient-info" class="profile-btn">
+      <span>🧾</span>
+      <span>My Profile</span>
+    </a>
+
+    <div class="disclaimer">
+      <strong>⚠️ Disclaimer</strong><br>
+      General information only. Not a substitute for professional medical advice. Always consult a qualified doctor.
+    </div>
+  </aside>
+
+  <!-- ══ CHAT ══ -->
+  <div class="chat-wrap">
+    <div class="topbar">
+      <div class="top-avatar">🤖</div>
+      <div>
+        <div class="top-name" id="topbar-name">MedBot — AI Medical Assistant</div>
+        <div class="top-sub">Powered by Claude AI · RAG Knowledge Base</div>
+      </div>
+      <button class="new-chat-top" onclick="newChat()">+ New Chat</button>
+      <div class="top-badge">✓ Verified Medical KB</div>
+    </div>
+
+    <div class="messages" id="messages">
+      <div class="welcome-card" id="welcome-card">
+        <h2 id="welcome-title">👋 Welcome to MedBot!</h2>
+        <p id="welcome-text">Ask me anything about symptoms, conditions, medications, first aid, and general health. I'm here to help with clear, trustworthy medical information.</p>
+      </div>
+      <div class="msg bot" id="init-msg">
+        <div class="avatar bot">🤖</div>
+        <div class="msg-col">
+          <div class="msg-label">MedBot</div>
+          <div class="bubble" id="init-bubble">Hello! I'm <strong>MedBot</strong>. How can I help you today?</div>
+          <div class="msg-time" id="init-time"></div>
+        </div>
+      </div>
+      <div class="suggestions-wrap" id="suggestions">
+        <div class="suggestions-label">✨ Try asking one of these…</div>
+        <div class="suggestion-grid" id="mid-quick-grid"></div>
+      </div>
+    </div>
+
+    <div class="input-wrap">
+      <div class="img-preview-wrap" id="img-preview-wrap">
+        <img class="img-preview-thumb" id="img-preview-thumb" src="" alt="preview" />
+        <span class="img-preview-name" id="img-preview-name"></span>
+        <button class="img-remove-btn" onclick="removeImg()" title="Remove">✕</button>
+      </div>
+      <div class="input-box">
+        <button class="action-btn" onclick="document.getElementById('img-file-input').click()" title="Attach image">🖼️</button>
+        <input type="file" id="img-file-input" accept="image/*" style="display:none" />
+        <textarea id="user-input" rows="1" placeholder="Ask a medical question… (Enter to send)"></textarea>
+        <button class="action-btn" id="voice-btn" title="Voice input">🎤</button>
+        <button class="send-btn" id="send-btn">➤</button>
+      </div>
+      <div class="input-hint">Always verify important medical information with a qualified healthcare professional.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── Guard: patient must register first (admins bypass via token) ── */
+const _isAdmin = !!localStorage.getItem('admin_token');
+let patient = null;
+try { patient = JSON.parse(localStorage.getItem('medbot_patient') || 'null'); } catch {}
+if (!patient && !_isAdmin) { window.location.href = '/login'; }
+
+if (patient && patient.name) {
+  const chip = document.getElementById('patient-chip');
+  chip.style.display = '';
+  document.getElementById('pc-name').textContent = patient.name;
+  const parts = [patient.age ? patient.age + ' yrs' : '', patient.gender, patient.blood_group].filter(Boolean);
+  document.getElementById('pc-detail').textContent = parts.join(' · ') || '—';
+  if (patient.symptoms) document.getElementById('pc-symptom').textContent = '🩺 ' + patient.symptoms;
+
+  document.getElementById('topbar-name').textContent = `Hi ${patient.name.split(' ')[0]}! — MedBot`;
+  document.getElementById('welcome-title').textContent = `👋 Hi, ${patient.name.split(' ')[0]}!`;
+  document.getElementById('welcome-text').textContent =
+    patient.symptoms
+      ? `I can see you're visiting about: "${patient.symptoms.substring(0, 100)}${patient.symptoms.length > 100 ? '…' : ''}". Feel free to ask me anything — I'm here to help.`
+      : 'I have your health profile ready. Feel free to ask me anything about your symptoms or general health.';
+
+  const greeting = patient.symptoms
+    ? `Hello <strong>${patient.name.split(' ')[0]}</strong>! I can see your reason for visit is: <em>"${escHtml(patient.symptoms.substring(0, 120))}"</em>. How can I assist you further today?`
+    : `Hello <strong>${patient.name.split(' ')[0]}</strong>! How can I help you today?`;
+  document.getElementById('init-bubble').innerHTML = greeting;
+}
+
+/* ── Quick-question pool ── */
+const Q_POOL = [
+  {icon:'🩸', text:'What are symptoms of diabetes?'},
+  {icon:'❤️', text:'How to manage high blood pressure?'},
+  {icon:'💔', text:'Signs of a heart attack?'},
+  {icon:'🫀', text:'How to do CPR?'},
+  {icon:'🌿', text:'Common allergy treatments?'},
+  {icon:'😴', text:'What causes chronic fatigue?'},
+  {icon:'🥗', text:'How to lower cholesterol naturally?'},
+  {icon:'🧠', text:'Signs of depression and anxiety?'},
+  {icon:'📊', text:'What is a normal blood pressure range?'},
+  {icon:'🍬', text:'Foods to avoid with high blood sugar?'},
+  {icon:'🌡️', text:'How to treat a fever at home?'},
+  {icon:'💧', text:'What are signs of dehydration?'},
+  {icon:'🦴', text:'When to see a doctor for back pain?'},
+  {icon:'😴', text:'How to improve sleep quality?'},
+  {icon:'🤕', text:'What causes frequent headaches?'},
+  {icon:'🧘', text:'How to manage stress and anxiety?'},
+  {icon:'🌟', text:'Signs of vitamin deficiency?'},
+  {icon:'🤧', text:'Difference between cold and flu?'},
+  {icon:'💪', text:'How to boost immunity naturally?'},
+  {icon:'⚠️', text:'When is chest pain serious?'},
+];
+
+function shuffle(arr){ return [...arr].sort(()=>Math.random()-.5); }
+function pickRandom(n){ return shuffle(Q_POOL).slice(0,n); }
+
+function renderMidQuick(){
+  const qs = pickRandom(6);
+  const grid = document.getElementById('mid-quick-grid');
+  if(!grid) return;
+  grid.innerHTML = qs.map(q=>`
+    <button class="suggest-card" onclick="askQuick('${escAttr(q.text)}')">
+      <span class="suggest-icon">${q.icon}</span>${escHtml(q.text)}
+    </button>`).join('');
+}
+
+/* ── Session storage ── */
+const STORAGE_KEY = patient && patient.uuid ? `medbot_sessions_${patient.uuid}` : 'medbot_sessions_admin';
+let currentSessionId = null;
+let chatContext = [];
+let loading = false;
+
+function getSessions(){ try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]'); }catch{ return []; } }
+function saveSessions(s){ localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); }
+
+function createSession(firstMsg){
+  const id = Date.now().toString();
+  const title = firstMsg.length>46 ? firstMsg.slice(0,43)+'…' : firstMsg;
+  const session = {id, title, timestamp:new Date().toISOString(), messages:[]};
+  const sessions = getSessions();
+  sessions.unshift(session);
+  saveSessions(sessions.slice(0,30));
+  currentSessionId = id;
+  return id;
+}
+
+function updateSession(content, role){
+  if(!currentSessionId) return;
+  const sessions = getSessions();
+  const s = sessions.find(x=>x.id===currentSessionId);
+  if(s){ s.messages.push({role,content}); s.updatedAt=new Date().toISOString(); saveSessions(sessions); }
+}
+
+function deleteSession(id, event){
+  event.stopPropagation();
+  const sessions = getSessions().filter(s=>s.id!==id);
+  saveSessions(sessions);
+  if(currentSessionId===id) newChat(); else renderHistory();
+}
+
+function loadSession(id){
+  const sessions = getSessions();
+  const session = sessions.find(s=>s.id===id);
+  if(!session) return;
+  currentSessionId = id; chatContext = [];
+  resetMessages(); hideSuggestions();
+  session.messages.forEach(m=>{
+    if(m.role==='user') addMsg('user', escHtml(m.content).replace(/\n/g,'<br>'));
+    else addMsg('bot', fmt(m.content));
+    chatContext.push({role:m.role==='assistant'?'assistant':'user', content:m.content});
+  });
+  if(chatContext.length>12) chatContext=chatContext.slice(-12);
+  renderHistory();
+}
+
+function newChat(){
+  currentSessionId=null; chatContext=[];
+  resetMessages(); showSuggestions(); renderHistory();
+  document.getElementById('user-input').focus();
+}
+
+function renderHistory(){
+  const list = document.getElementById('history-list');
+  const sessions = getSessions();
+  if(!sessions.length){
+    list.innerHTML='<div class="hist-empty">No conversations yet.<br>Ask your first question!</div>';
+    return;
+  }
+  list.innerHTML = sessions.map(s=>`
+    <div class="hist-item ${s.id===currentSessionId?'active':''}" onclick="loadSession('${s.id}')">
+      <div class="hist-dot"></div>
+      <div class="hist-content">
+        <div class="hist-title">${escHtml(s.title)}</div>
+        <div class="hist-time">${relTime(s.timestamp)}</div>
+      </div>
+      <button class="hist-del" onclick="deleteSession('${s.id}',event)" title="Delete">🗑</button>
+    </div>`).join('');
+}
+
+function relTime(iso){
+  const m=Math.floor((Date.now()-new Date(iso).getTime())/60000);
+  if(m<1) return 'just now';
+  if(m<60) return m+'m ago';
+  const h=Math.floor(m/60);
+  if(h<24) return h+'h ago';
+  const d=Math.floor(h/24);
+  if(d<7) return d+'d ago';
+  return new Date(iso).toLocaleDateString();
+}
+
+/* ── DOM helpers ── */
+const messagesEl = document.getElementById('messages');
+const inputEl    = document.getElementById('user-input');
+const sendBtn    = document.getElementById('send-btn');
+document.getElementById('init-time').textContent = now();
+
+function now(){ return new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); }
+function scrollBottom(){ messagesEl.scrollTop = messagesEl.scrollHeight; }
+function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escAttr(s){ return s.replace(/'/g,'&#39;').replace(/"/g,'&quot;'); }
+function hideSuggestions(){ const el=document.getElementById('suggestions'); if(el) el.style.display='none'; }
+function showSuggestions(){ const el=document.getElementById('suggestions'); if(el) el.style.display=''; renderMidQuick(); }
+
+function resetMessages(){
+  messagesEl.innerHTML=`
+    <div class="welcome-card">
+      <h2>👋 Welcome to MedBot!</h2>
+      <p>Ask me anything about symptoms, conditions, medications, first aid, and general health.</p>
+    </div>
+    <div class="msg bot">
+      <div class="avatar bot">🤖</div>
+      <div class="msg-col">
+        <div class="msg-label">MedBot</div>
+        <div class="bubble">Hello! I'm <strong>MedBot</strong>. How can I help you today?</div>
+        <div class="msg-time">${now()}</div>
+      </div>
+    </div>
+    <div class="suggestions-wrap" id="suggestions">
+      <div class="suggestions-label">✨ Try asking one of these…</div>
+      <div class="suggestion-grid" id="mid-quick-grid"></div>
+    </div>`;
+  renderMidQuick();
+}
+
+function addMsg(role, html){
+  const isBot = role==='bot';
+  const row=document.createElement('div'); row.className=`msg ${role}`;
+  const av=document.createElement('div'); av.className=`avatar ${isBot?'bot':'user-av'}`; av.textContent=isBot?'🤖':'👤';
+  const col=document.createElement('div'); col.className='msg-col';
+  const lbl=document.createElement('div'); lbl.className='msg-label'; lbl.textContent=isBot?'MedBot':'You';
+  const bbl=document.createElement('div'); bbl.className='bubble'; bbl.innerHTML=html;
+  const tm=document.createElement('div'); tm.className='msg-time'; tm.textContent=now();
+  col.append(lbl,bbl,tm);
+  if(!isBot) col.style.alignItems='flex-end';
+  row.append(av,col);
+  messagesEl.appendChild(row); scrollBottom();
+  return bbl;
+}
+
+function showTyping(){
+  const row=document.createElement('div'); row.className='msg bot'; row.id='typing';
+  const av=document.createElement('div'); av.className='avatar bot'; av.textContent='🤖';
+  const col=document.createElement('div'); col.className='msg-col';
+  const lbl=document.createElement('div'); lbl.className='msg-label'; lbl.textContent='MedBot';
+  const bbl=document.createElement('div'); bbl.className='bubble';
+  bbl.innerHTML='<div class="typing-dots"><span></span><span></span><span></span></div>';
+  col.append(lbl,bbl); row.append(av,col); messagesEl.appendChild(row); scrollBottom();
+}
+function removeTyping(){ const el=document.getElementById('typing'); if(el) el.remove(); }
+
+function fmt(t){
+  return t
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g,'<em>$1</em>')
+    .replace(/^#{1,3}\s(.+)/gm,'<strong>$1</strong>')
+    .replace(/^\*\s(.+)/gm,'• $1')
+    .replace(/\n/g,'<br>');
+}
+
+/* ── Image attachment ── */
+let attachedImage = null;
+
+document.getElementById('img-file-input').addEventListener('change', function(){
+  const file = this.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    attachedImage = { dataUrl: e.target.result, name: file.name };
+    document.getElementById('img-preview-thumb').src = e.target.result;
+    document.getElementById('img-preview-name').textContent = file.name;
+    document.getElementById('img-preview-wrap').classList.add('show');
+  };
+  reader.readAsDataURL(file); this.value='';
+});
+function removeImg(){
+  attachedImage=null;
+  document.getElementById('img-preview-wrap').classList.remove('show');
+  document.getElementById('img-preview-thumb').src='';
+}
+
+/* ── Voice input ── */
+const voiceBtn=document.getElementById('voice-btn');
+let recognition=null, isRecording=false;
+(function initVoice(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){ voiceBtn.style.opacity='.4'; voiceBtn.style.cursor='not-allowed'; return; }
+  recognition=new SR(); recognition.continuous=false; recognition.interimResults=true; recognition.lang='en-US';
+  recognition.onresult=e=>{ const t=Array.from(e.results).map(r=>r[0].transcript).join(''); inputEl.value=t; autoResize(); };
+  recognition.onend=()=>{ isRecording=false; voiceBtn.classList.remove('recording'); voiceBtn.textContent='🎤'; };
+  recognition.onerror=()=>{ isRecording=false; voiceBtn.classList.remove('recording'); voiceBtn.textContent='🎤'; };
+  voiceBtn.addEventListener('click',()=>{
+    if(!recognition) return;
+    if(isRecording){ recognition.stop(); }
+    else{ recognition.start(); isRecording=true; voiceBtn.classList.add('recording'); voiceBtn.textContent='⏹️'; }
+  });
+})();
+
+/* ── Send message ── */
+async function send(text){
+  const hasImg=!!attachedImage;
+  if(!text.trim()&&!hasImg||loading) return;
+  const sessionTitle=text.trim()||(attachedImage?'📷 '+attachedImage.name:'New chat');
+  if(!currentSessionId){ createSession(sessionTitle); hideSuggestions(); }
+  loading=true; sendBtn.disabled=true;
+  inputEl.value=''; inputEl.style.height='auto';
+
+  let userHtml='';
+  if(hasImg){ userHtml+=`<img class="chat-img" src="${attachedImage.dataUrl}" alt="${escHtml(attachedImage.name)}" onclick="this.classList.toggle('zoomed')"/><br>`; removeImg(); }
+  if(text.trim()) userHtml+=escHtml(text).replace(/\n/g,'<br>');
+  addMsg('user', userHtml);
+
+  const msgToBot=text.trim()||`I've shared a medical image. Can you help?`;
+  updateSession(msgToBot,'user');
+  showTyping();
+
+  try{
+    const res=await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msgToBot,history:chatContext})});
+    const data=await res.json(); removeTyping();
+    if(!res.ok) addMsg('bot',`⚠️ <strong>Error:</strong> ${escHtml(data.detail||'Something went wrong.')}`);
+    else{
+      addMsg('bot',fmt(data.reply));
+      updateSession(data.reply,'assistant');
+      chatContext.push({role:'user',content:msgToBot},{role:'assistant',content:data.reply});
+      if(chatContext.length>12) chatContext=chatContext.slice(-12);
+      renderHistory();
+    }
+  }catch{
+    removeTyping();
+    addMsg('bot','⚠️ Cannot reach server. Make sure uvicorn is running.');
+  }finally{ loading=false; sendBtn.disabled=false; inputEl.focus(); }
+}
+
+function askQuick(text){ send(text); }
+function autoResize(){ inputEl.style.height='auto'; inputEl.style.height=Math.min(inputEl.scrollHeight,120)+'px'; }
+inputEl.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send(inputEl.value);} });
+inputEl.addEventListener('input', autoResize);
+sendBtn.addEventListener('click',()=>send(inputEl.value));
+
+/* ── Init ── */
+renderMidQuick();
+renderHistory();
+</script>
+
+<!-- ══ EMERGENCY WIDGET ══ -->
+<style>
+.emer-fab{position:fixed;bottom:28px;right:28px;z-index:500;width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,#E53935,#B71C1C);border:none;cursor:pointer;box-shadow:0 6px 22px rgba(229,57,53,.5);display:flex;align-items:center;justify-content:center;font-size:24px;animation:emerPulse 2s infinite;transition:.18s}
+.emer-fab:hover{transform:scale(1.1);box-shadow:0 10px 32px rgba(229,57,53,.65)}
+@keyframes emerPulse{0%,100%{box-shadow:0 6px 22px rgba(229,57,53,.5),0 0 0 0 rgba(229,57,53,.4)}70%{box-shadow:0 6px 22px rgba(229,57,53,.5),0 0 0 14px rgba(229,57,53,0)}}
+.emer-overlay{position:fixed;inset:0;background:rgba(10,10,30,.6);z-index:600;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(5px);opacity:0;pointer-events:none;transition:.2s}
+.emer-overlay.open{opacity:1;pointer-events:all}
+.emer-modal{background:#fff;border-radius:20px;width:100%;max-width:420px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.25);transform:scale(.95);transition:.22s}
+.emer-overlay.open .emer-modal{transform:scale(1)}
+.emer-head{background:linear-gradient(135deg,#E53935,#B71C1C);padding:22px 24px;display:flex;align-items:center;gap:12px}
+.emer-head-icon{font-size:36px}
+.emer-head h2{font-size:18px;font-weight:800;color:#fff}
+.emer-head p{font-size:12px;color:rgba(255,255,255,.75);margin-top:2px}
+.emer-close{margin-left:auto;background:rgba(255,255,255,.2);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center}
+.emer-body{padding:18px 20px}
+.emer-card{display:flex;align-items:center;gap:14px;padding:13px 16px;border-radius:12px;margin-bottom:10px;border:1.5px solid #f0f0f0;transition:.16s;text-decoration:none}
+.emer-card:hover{border-color:#E53935;background:#FFF5F5;transform:translateX(3px)}
+.emer-card:last-child{margin-bottom:0}
+.emer-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.emer-info{flex:1}
+.emer-num{font-size:18px;font-weight:800;color:#E53935;letter-spacing:.5px}
+.emer-desc{font-size:12px;color:#607D8B;margin-top:1px;font-weight:500}
+.call-chip{padding:6px 14px;background:#E53935;color:#fff;border-radius:20px;font-size:12.5px;font-weight:700;flex-shrink:0}
+</style>
+<button class="emer-fab" onclick="document.getElementById('emer-overlay').classList.add('open')" title="Emergency Contacts">🚨</button>
+<div class="emer-overlay" id="emer-overlay" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="emer-modal">
+    <div class="emer-head">
+      <div class="emer-head-icon">🚨</div>
+      <div><h2>Emergency Contacts</h2><p>24/7 — Call immediately in case of emergency</p></div>
+      <button class="emer-close" onclick="document.getElementById('emer-overlay').classList.remove('open')">✕</button>
+    </div>
+    <div class="emer-body">
+      <a class="emer-card" href="tel:112"><div class="emer-icon" style="background:#FFEBEE">🆘</div><div class="emer-info"><div class="emer-num">112</div><div class="emer-desc">National Emergency Helpline</div></div><div class="call-chip">Call</div></a>
+      <a class="emer-card" href="tel:108"><div class="emer-icon" style="background:#FFF3E0">🚑</div><div class="emer-info"><div class="emer-num">108</div><div class="emer-desc">Ambulance Service</div></div><div class="call-chip">Call</div></a>
+      <a class="emer-card" href="tel:102"><div class="emer-icon" style="background:#E8F5E9">🩺</div><div class="emer-info"><div class="emer-num">102</div><div class="emer-desc">National Ambulance (Pregnant Women &amp; Children)</div></div><div class="call-chip">Call</div></a>
+      <a class="emer-card" href="tel:104"><div class="emer-icon" style="background:#E3F2FD">💊</div><div class="emer-info"><div class="emer-num">104</div><div class="emer-desc">Medical Helpline</div></div><div class="call-chip">Call</div></a>
+      <a class="emer-card" href="tel:18001804132"><div class="emer-icon" style="background:#F3E5F5">🧠</div><div class="emer-info"><div class="emer-num">1800-180-4132</div><div class="emer-desc">Mental Health Helpline (iCall)</div></div><div class="call-chip">Call</div></a>
+      <a class="emer-card" href="tel:1098"><div class="emer-icon" style="background:#E0F7FA">👶</div><div class="emer-info"><div class="emer-num">1098</div><div class="emer-desc">Child Helpline (CHILDLINE)</div></div><div class="call-chip">Call</div></a>
+    </div>
+  </div>
+</div>
+<script>document.addEventListener('keydown',e=>{if(e.key==='Escape')document.getElementById('emer-overlay')?.classList.remove('open')});</script>
+</body>
+</html>

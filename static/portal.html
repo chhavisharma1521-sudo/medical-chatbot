@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Patient Portal — MediCare</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--blue:#1565C0;--blue-dark:#0d2b6b;--blue-light:#42a5f5;--text:#1e293b;--muted:#64748b;--border:#e2e8f0;--bg:#f8fafc}
+body{font-family:'Segoe UI',sans-serif;background:var(--bg);color:var(--text)}
+
+/* Auth screen */
+.auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--blue-dark),var(--blue),var(--blue-light));padding:20px}
+.auth-card{background:#fff;border-radius:20px;padding:36px;width:100%;max-width:420px;box-shadow:0 24px 64px rgba(0,0,0,.25)}
+.auth-logo{font-size:22px;font-weight:800;color:var(--blue-dark);margin-bottom:4px}.auth-logo span{color:var(--blue-light)}
+.auth-sub{font-size:13px;color:var(--muted);margin-bottom:28px}
+.auth-tabs{display:flex;gap:0;margin-bottom:24px;border:1.5px solid var(--border);border-radius:10px;overflow:hidden}
+.auth-tab{flex:1;padding:10px;border:none;background:#fff;font-size:13px;font-weight:700;cursor:pointer;color:var(--muted);transition:.15s}
+.auth-tab.active{background:var(--blue);color:#fff}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:5px}
+.field input{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit}
+.field input:focus{outline:none;border-color:var(--blue)}
+.auth-btn{width:100%;padding:13px;background:linear-gradient(135deg,var(--blue-dark),var(--blue));color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px}
+.auth-err{color:#E53935;font-size:12px;margin-top:8px;display:none}
+
+/* App layout */
+#portal-app{display:none;min-height:100vh;flex-direction:column}
+.p-header{background:linear-gradient(135deg,var(--blue-dark),var(--blue));padding:16px 28px;display:flex;align-items:center;justify-content:space-between}
+.p-logo{color:#fff;font-size:18px;font-weight:800}.p-logo span{color:#90caf9}
+.p-user{color:rgba(255,255,255,.85);font-size:13px;display:flex;align-items:center;gap:12px}
+.p-logout{background:rgba(255,255,255,.15);border:none;color:#fff;padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer;font-weight:700}
+.p-nav{background:#fff;border-bottom:1.5px solid var(--border);display:flex;gap:4px;padding:0 24px;overflow-x:auto}
+.p-nav-btn{padding:14px 16px;border:none;background:none;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2.5px solid transparent;white-space:nowrap;transition:.15s}
+.p-nav-btn.active{color:var(--blue);border-bottom-color:var(--blue)}
+.p-content{flex:1;padding:28px;max-width:1100px;margin:0 auto;width:100%}
+
+/* Panels */
+.p-panel{display:none}.p-panel.active{display:block}
+.p-section-title{font-size:16px;font-weight:800;color:var(--blue-dark);margin-bottom:16px}
+
+/* Cards grid */
+.stat-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;margin-bottom:24px}
+.stat-box{background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:18px;text-align:center}
+.stat-box .num{font-size:28px;font-weight:800;color:var(--blue)}
+.stat-box .lbl{font-size:12px;color:var(--muted);margin-top:4px}
+
+/* Tables */
+.tbl-wrap{overflow-x:auto;border:1.5px solid var(--border);border-radius:12px;background:#fff}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:#f8fafc;padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);border-bottom:1.5px solid var(--border);text-transform:uppercase}
+td{padding:10px 14px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafcff}
+.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700}
+.badge.approved,.badge.paid,.badge.active,.badge.analyzed{background:#E8F5E9;color:#2E7D32}
+.badge.pending,.badge.unpaid{background:#FFF3E0;color:#E65100}
+.badge.cancelled,.badge.high{background:#FFEBEE;color:#C62828}
+
+/* Health score */
+.health-overview{display:grid;grid-template-columns:180px 1fr;gap:20px;margin-bottom:24px;background:#fff;border:1.5px solid var(--border);border-radius:16px;padding:24px}
+.score-circle{width:120px;height:120px;border-radius:50%;border:8px solid;display:flex;flex-direction:column;align-items:center;justify-content:center;margin:0 auto}
+.score-num-big{font-size:36px;font-weight:800}
+.score-grade{font-size:13px;font-weight:700;margin-top:2px}
+.metric-mini-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.metric-mini{background:#f8fafc;border-radius:10px;padding:12px;text-align:center}
+.metric-mini .mv{font-size:18px;font-weight:800;color:var(--blue)}
+.metric-mini .ml{font-size:11px;color:var(--muted)}
+
+/* Announcement card */
+.ann-card{background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:16px;margin-bottom:10px;border-left:4px solid var(--blue)}
+.ann-card.emergency{border-left-color:#E53935}
+.ann-card.health{border-left-color:#43A047}
+
+/* Lab finding */
+.finding-pill{background:#f0f4ff;color:var(--blue-dark);border-radius:6px;padding:4px 10px;font-size:12px;display:inline-block;margin:3px 3px 3px 0}
+
+/* Empty state */
+.empty{text-align:center;padding:40px;color:var(--muted);font-size:14px}
+</style>
+</head>
+<body>
+
+<!-- AUTH SCREEN -->
+<div class="auth-wrap" id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">Medi<span>Care</span> Portal</div>
+    <div class="auth-sub">Your personal health dashboard</div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchAuthTab('login',this)">Login</button>
+      <button class="auth-tab" onclick="switchAuthTab('register',this)">Register</button>
+    </div>
+    <div id="auth-login">
+      <div class="field"><label>Email</label><input id="l-email" type="email" placeholder="your@email.com"/></div>
+      <div class="field"><label>Password</label><input id="l-pass" type="password" placeholder="Password"/></div>
+      <button class="auth-btn" onclick="portalLogin()">Sign In</button>
+      <div class="auth-err" id="l-err"></div>
+    </div>
+    <div id="auth-register" style="display:none">
+      <div class="field"><label>Full Name</label><input id="r-name" placeholder="Your full name"/></div>
+      <div class="field"><label>Email</label><input id="r-email" type="email" placeholder="your@email.com"/></div>
+      <div class="field"><label>Phone</label><input id="r-phone" placeholder="+91 ..."/></div>
+      <div class="field"><label>Password</label><input id="r-pass" type="password" placeholder="Create a password"/></div>
+      <button class="auth-btn" onclick="portalRegister()">Create Account</button>
+      <div class="auth-err" id="r-err"></div>
+    </div>
+  </div>
+</div>
+
+<!-- PORTAL APP -->
+<div id="portal-app">
+  <div class="p-header">
+    <div class="p-logo">Medi<span>Care</span> Portal</div>
+    <div class="p-user">
+      <span id="p-username"></span>
+      <button class="p-logout" onclick="portalLogout()">Sign Out</button>
+    </div>
+  </div>
+  <nav class="p-nav">
+    <button class="p-nav-btn active" onclick="showPPanel('overview',this)">🏠 Overview</button>
+    <button class="p-nav-btn" onclick="showPPanel('appointments',this)">📅 Appointments</button>
+    <button class="p-nav-btn" onclick="showPPanel('health',this)">📈 Health</button>
+    <button class="p-nav-btn" onclick="showPPanel('prescriptions',this)">💊 Prescriptions</button>
+    <button class="p-nav-btn" onclick="showPPanel('lab',this)">🔬 Lab Reports</button>
+    <button class="p-nav-btn" onclick="showPPanel('billing',this)">🧾 Billing</button>
+    <button class="p-nav-btn" onclick="showPPanel('plans',this)">📋 Treatment Plans</button>
+    <button class="p-nav-btn" onclick="showPPanel('announcements',this)">📢 Announcements</button>
+  </nav>
+  <div class="p-content">
+
+    <!-- OVERVIEW -->
+    <div class="p-panel active" id="pp-overview">
+      <div class="p-section-title">Welcome back, <span id="ov-name"></span> 👋</div>
+      <div class="stat-row" id="ov-stats"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <div>
+          <div class="p-section-title" style="font-size:14px">Upcoming Appointments</div>
+          <div id="ov-appts"></div>
+        </div>
+        <div>
+          <div class="p-section-title" style="font-size:14px">Latest Announcements</div>
+          <div id="ov-ann"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- APPOINTMENTS -->
+    <div class="p-panel" id="pp-appointments">
+      <div class="p-section-title">My Appointments</div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Date</th><th>Time</th><th>Doctor</th><th>Specialization</th><th>Status</th><th>Payment</th></tr></thead>
+        <tbody id="appt-tbody"></tbody>
+      </table></div>
+    </div>
+
+    <!-- HEALTH -->
+    <div class="p-panel" id="pp-health">
+      <div class="p-section-title">Health Overview</div>
+      <div class="health-overview" id="health-overview-card"></div>
+      <div class="p-section-title" style="font-size:14px;margin-top:8px">30-Day Trends</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px" id="health-charts"></div>
+    </div>
+
+    <!-- PRESCRIPTIONS -->
+    <div class="p-panel" id="pp-prescriptions">
+      <div class="p-section-title">My Prescriptions</div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Date</th><th>Doctor</th><th>Diagnosis</th><th>Medications</th><th>Follow-up</th><th>View</th></tr></thead>
+        <tbody id="rx-tbody"></tbody>
+      </table></div>
+    </div>
+
+    <!-- LAB REPORTS -->
+    <div class="p-panel" id="pp-lab">
+      <div class="p-section-title">Lab Reports</div>
+      <div id="lab-cards"></div>
+    </div>
+
+    <!-- BILLING -->
+    <div class="p-panel" id="pp-billing">
+      <div class="p-section-title">My Invoices</div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Invoice #</th><th>Doctor</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
+        <tbody id="inv-tbody"></tbody>
+      </table></div>
+    </div>
+
+    <!-- TREATMENT PLANS -->
+    <div class="p-panel" id="pp-plans">
+      <div class="p-section-title">Treatment Plans</div>
+      <div id="plans-cards"></div>
+    </div>
+
+    <!-- ANNOUNCEMENTS -->
+    <div class="p-panel" id="pp-announcements">
+      <div class="p-section-title">Clinic Announcements</div>
+      <div id="ann-cards"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+let portalToken = localStorage.getItem('portal_token');
+let portalName  = localStorage.getItem('portal_name');
+let portalDataCache = null;
+let healthCharts = {};
+
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function pHeaders(){ return {Authorization:`Bearer ${portalToken}`}; }
+
+// ── Auth ──
+function switchAuthTab(tab, btn){
+  document.querySelectorAll('.auth-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('auth-login').style.display    = tab==='login'    ? '' : 'none';
+  document.getElementById('auth-register').style.display = tab==='register' ? '' : 'none';
+}
+
+async function portalLogin(){
+  const email = document.getElementById('l-email').value.trim();
+  const pass  = document.getElementById('l-pass').value;
+  const err   = document.getElementById('l-err');
+  err.style.display='none';
+  const res = await fetch('/portal/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pass})});
+  const data = await res.json();
+  if(!res.ok){ err.textContent=data.detail||'Login failed'; err.style.display='block'; return; }
+  localStorage.setItem('portal_token', data.token);
+  localStorage.setItem('portal_name', data.name);
+  portalToken = data.token; portalName = data.name;
+  initPortal();
+}
+
+async function portalRegister(){
+  const name  = document.getElementById('r-name').value.trim();
+  const email = document.getElementById('r-email').value.trim();
+  const phone = document.getElementById('r-phone').value.trim();
+  const pass  = document.getElementById('r-pass').value;
+  const err   = document.getElementById('r-err');
+  err.style.display='none';
+  const res = await fetch('/portal/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,email,password:pass,phone})});
+  const data = await res.json();
+  if(!res.ok){ err.textContent=data.detail||'Registration failed'; err.style.display='block'; return; }
+  document.getElementById('l-email').value=email;
+  switchAuthTab('login', document.querySelectorAll('.auth-tab')[0]);
+  alert('Account created! Please log in.');
+}
+
+function portalLogout(){
+  localStorage.removeItem('portal_token'); localStorage.removeItem('portal_name');
+  portalToken=null; portalName=null;
+  document.getElementById('auth-screen').style.display='flex';
+  document.getElementById('portal-app').style.display='none';
+}
+
+// ── Init ──
+async function initPortal(){
+  if(!portalToken){ document.getElementById('auth-screen').style.display='flex'; return; }
+  const me = await fetch('/portal/me',{headers:pHeaders()}).catch(()=>null);
+  if(!me||!me.ok){ portalLogout(); return; }
+  document.getElementById('auth-screen').style.display='none';
+  document.getElementById('portal-app').style.display='flex';
+  document.getElementById('portal-app').style.flexDirection='column';
+  document.getElementById('p-username').textContent = portalName;
+  document.getElementById('ov-name').textContent = portalName;
+  loadPortalData();
+}
+
+async function loadPortalData(){
+  const res = await fetch('/portal/data',{headers:pHeaders()});
+  if(!res.ok) return;
+  portalDataCache = await res.json();
+  renderOverview();
+  renderAppointments();
+  renderHealth();
+  renderPrescriptions();
+  renderLabReports();
+  renderBilling();
+  renderPlans();
+  renderAnnouncements();
+}
+
+function showPPanel(name, btn){
+  document.querySelectorAll('.p-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.p-nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(`pp-${name}`).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ── Render ──
+function renderOverview(){
+  const d = portalDataCache;
+  const today = new Date().toISOString().slice(0,10);
+  const upcoming = (d.appointments||[]).filter(a=>a.appointment_date>=today && a.status!=='Cancelled');
+  const unpaidInv = (d.invoices||[]).filter(i=>i.status==='unpaid');
+  const pendingRx = (d.prescriptions||[]).length;
+
+  document.getElementById('ov-stats').innerHTML = `
+    <div class="stat-box"><div class="num">${d.appointments?.length||0}</div><div class="lbl">Total Appointments</div></div>
+    <div class="stat-box"><div class="num" style="color:#43A047">${upcoming.length}</div><div class="lbl">Upcoming</div></div>
+    <div class="stat-box"><div class="num">${pendingRx}</div><div class="lbl">Prescriptions</div></div>
+    <div class="stat-box"><div class="num" style="color:#E53935">${unpaidInv.length}</div><div class="lbl">Unpaid Invoices</div></div>
+    <div class="stat-box"><div class="num">${d.lab_reports?.length||0}</div><div class="lbl">Lab Reports</div></div>
+    <div class="stat-box"><div class="num">${d.health?.score?.score??'—'}</div><div class="lbl">Health Score</div></div>
+  `;
+
+  document.getElementById('ov-appts').innerHTML = upcoming.slice(0,3).map(a=>`
+    <div style="background:#fff;border:1.5px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px">
+      <div style="font-weight:700;font-size:13px">${esc(a.doctor_name)}</div>
+      <div style="font-size:12px;color:var(--muted)">${a.appointment_date} at ${a.appointment_time||'—'}</div>
+      <span class="badge ${a.status?.toLowerCase()}">${a.status}</span>
+    </div>`).join('') || '<div class="empty" style="padding:20px">No upcoming appointments</div>';
+
+  const ann = (d.announcements||[]).slice(0,3);
+  document.getElementById('ov-ann').innerHTML = ann.map(a=>`
+    <div class="ann-card ${a.category}">
+      <div style="font-weight:700;font-size:13px">${esc(a.title)}</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px">${esc(a.body.slice(0,100))}${a.body.length>100?'…':''}</div>
+    </div>`).join('') || '<div class="empty" style="padding:20px">No announcements</div>';
+}
+
+function renderAppointments(){
+  const rows = portalDataCache?.appointments||[];
+  document.getElementById('appt-tbody').innerHTML = rows.length
+    ? rows.map(a=>`<tr>
+        <td>${a.appointment_date||'—'}</td>
+        <td>${a.appointment_time||'—'}</td>
+        <td><strong>${esc(a.doctor_name)}</strong></td>
+        <td>${esc(a.specialization||'—')}</td>
+        <td><span class="badge ${(a.status||'').toLowerCase()}">${a.status||'—'}</span></td>
+        <td><span class="badge ${(a.payment_status||'').toLowerCase()}">${a.payment_status||'—'}</span></td>
+      </tr>`).join('')
+    : '<tr><td colspan="6" class="empty">No appointments found</td></tr>';
+}
+
+function renderHealth(){
+  const h = portalDataCache?.health;
+  if(!h) return;
+  const score = h.score||{};
+  const latest = h.latest||{};
+  const gradeColor = {Excellent:'#16a34a',Good:'#1565C0',Fair:'#F57C00',Poor:'#E53935','N/A':'#94a3b8'};
+  const color = gradeColor[score.grade]||'#94a3b8';
+  const METRIC_LABELS = {blood_pressure:'🩸 BP',blood_sugar:'🍬 Sugar',weight:'⚖️ Weight',heart_rate:'❤️ HR',sleep:'😴 Sleep',water_intake:'💧 Water'};
+
+  document.getElementById('health-overview-card').innerHTML = `
+    <div style="text-align:center">
+      <div class="score-circle" style="border-color:${color}">
+        <div class="score-num-big" style="color:${color}">${score.score??'—'}</div>
+        <div class="score-grade" style="color:${color}">${score.grade||'N/A'}</div>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-top:10px">Daily Health Score</div>
+    </div>
+    <div>
+      <div class="metric-mini-grid">
+        ${Object.entries(METRIC_LABELS).map(([k,lbl])=>{
+          const r = latest[k];
+          if(!r) return `<div class="metric-mini"><div class="mv" style="color:var(--muted);font-size:13px">—</div><div class="ml">${lbl}</div></div>`;
+          const val = k==='blood_pressure' ? `${r.value_1}/${r.value_2||'?'}` : r.value_1;
+          return `<div class="metric-mini"><div class="mv">${val}</div><div class="ml">${lbl}</div></div>`;
+        }).join('')}
+      </div>
+    </div>`;
+
+  // Charts
+  const history = h.history||[];
+  const types = ['blood_pressure','blood_sugar','weight','heart_rate','sleep','water_intake'];
+  const COLORS = {blood_pressure:'#E53935',blood_sugar:'#F57C00',weight:'#8E24AA',heart_rate:'#E91E63',sleep:'#3949AB',water_intake:'#00897B'};
+  Object.values(healthCharts).forEach(c=>c.destroy()); healthCharts={};
+
+  document.getElementById('health-charts').innerHTML = types.map(t=>{
+    const pts = history.filter(p=>p.metric_type===t);
+    if(!pts.length) return '';
+    return `<div style="background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:16px">
+      <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:10px">${METRIC_LABELS[t]}</div>
+      <div style="height:120px"><canvas id="pc-${t}"></canvas></div>
+    </div>`;
+  }).join('');
+
+  requestAnimationFrame(()=>{
+    types.forEach(t=>{
+      const canvas = document.getElementById(`pc-${t}`);
+      if(!canvas) return;
+      const pts = history.filter(p=>p.metric_type===t);
+      const color = COLORS[t]||'#1565C0';
+      const datasets = t==='blood_pressure'
+        ? [{label:'Systolic',data:pts.map(p=>p.value_1),borderColor:color,tension:.4,pointRadius:2},
+           {label:'Diastolic',data:pts.map(p=>p.value_2),borderColor:'#90CAF9',tension:.4,pointRadius:2}]
+        : [{label:METRIC_LABELS[t],data:pts.map(p=>p.value_1),borderColor:color,backgroundColor:color+'22',tension:.4,fill:true,pointRadius:2}];
+      healthCharts[t] = new Chart(canvas,{
+        type:'line',data:{labels:pts.map(p=>p.recorded_at.slice(5,10)),datasets},
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:t==='blood_pressure',labels:{font:{size:10},boxWidth:8}}},
+          scales:{x:{grid:{display:false},ticks:{font:{size:9}}},y:{grid:{color:'#f0f4f9'},ticks:{font:{size:9}}}}}
+      });
+    });
+  });
+}
+
+function renderPrescriptions(){
+  const rows = portalDataCache?.prescriptions||[];
+  document.getElementById('rx-tbody').innerHTML = rows.length
+    ? rows.map(r=>`<tr>
+        <td>${r.created_at?.slice(0,10)||'—'}</td>
+        <td>${esc(r.doctor_name)}</td>
+        <td>${esc(r.diagnosis||'—')}</td>
+        <td>${(r.medications||[]).map(m=>esc(m.name||m)).slice(0,2).join(', ')}${(r.medications||[]).length>2?'…':''}</td>
+        <td>${esc(r.follow_up||'—')}</td>
+        <td><a href="/prescription-view?id=${r.id}" target="_blank" style="color:var(--blue);font-size:12px;font-weight:700">View PDF</a></td>
+      </tr>`).join('')
+    : '<tr><td colspan="6" class="empty">No prescriptions yet</td></tr>';
+}
+
+function renderLabReports(){
+  const reports = portalDataCache?.lab_reports||[];
+  document.getElementById('lab-cards').innerHTML = reports.length
+    ? reports.map(r=>`
+      <div style="background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:18px;margin-bottom:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div>
+            <div style="font-weight:700">${esc(r.report_type)}</div>
+            <div style="font-size:12px;color:var(--muted)">${r.uploaded_at?.slice(0,10)||''}</div>
+          </div>
+          <span class="badge ${r.status}">${r.status}</span>
+        </div>
+        ${r.ai_summary?`<div style="font-size:13px;line-height:1.5;color:var(--muted);margin-bottom:10px">${esc(r.ai_summary)}</div>`:''}
+        ${(r.key_findings||[]).map(f=>`<span class="finding-pill">• ${esc(f)}</span>`).join('')}
+      </div>`).join('')
+    : '<div class="empty">No lab reports uploaded yet</div>';
+}
+
+function renderBilling(){
+  const rows = portalDataCache?.invoices||[];
+  document.getElementById('inv-tbody').innerHTML = rows.length
+    ? rows.map(i=>`<tr>
+        <td><strong>${esc(i.invoice_number)}</strong></td>
+        <td>${esc(i.doctor_name||'—')}</td>
+        <td style="font-weight:700">₹${Number(i.total).toLocaleString()}</td>
+        <td><span class="badge ${i.status}">${i.status}</span></td>
+        <td>${i.created_at?.slice(0,10)||'—'}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="5" class="empty">No invoices found</td></tr>';
+}
+
+function renderPlans(){
+  const plans = portalDataCache?.treatment_plans||[];
+  document.getElementById('plans-cards').innerHTML = plans.length
+    ? plans.map(p=>`
+      <div style="background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:20px;margin-bottom:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div>
+            <div style="font-weight:700;font-size:15px">${esc(p.title)}</div>
+            <div style="font-size:12px;color:var(--muted)">Dr. ${esc(p.doctor_name||'—')} · ${p.start_date||'—'}</div>
+          </div>
+          <span class="badge ${p.status}">${p.status}</span>
+        </div>
+        ${p.diagnosis?`<div style="font-size:13px;color:var(--muted);margin-bottom:10px">Diagnosis: ${esc(p.diagnosis)}</div>`:''}
+        ${(p.goals||[]).length?`<div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px">GOALS</div>${p.goals.map(g=>`<div style="font-size:13px;padding:4px 0">• ${esc(g)}</div>`).join('')}`:''}
+      </div>`).join('')
+    : '<div class="empty">No treatment plans assigned</div>';
+}
+
+function renderAnnouncements(){
+  const ann = portalDataCache?.announcements||[];
+  const ANN_COLOR={general:'#1565C0',health:'#43A047',clinic:'#F57C00',emergency:'#E53935'};
+  document.getElementById('ann-cards').innerHTML = ann.length
+    ? ann.map(a=>`<div class="ann-card ${a.category}" style="border-left-color:${ANN_COLOR[a.category]||'#1565C0'}">
+        <div style="font-weight:700;font-size:14px;margin-bottom:6px">${esc(a.title)}</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.5">${esc(a.body)}</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:8px">${a.category} · ${a.created_at?.slice(0,10)||''}</div>
+      </div>`).join('')
+    : '<div class="empty">No announcements</div>';
+}
+
+// ── Boot ──
+initPortal();
+</script>
+</body>
+</html>

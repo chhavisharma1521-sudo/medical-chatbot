@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MedBot — Patient Registration</title>
+  <style>
+    :root {
+      --blue:#1565C0; --blue-light:#1E88E5; --blue-dark:#0D47A1;
+      --bg:#EEF4FF; --white:#fff; --text:#1A1A2E; --muted:#607D8B;
+      --border:#DCE4F0; --success:#43A047;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);min-height:100vh;padding:0 0 60px}
+
+    /* ── Header ── */
+    .header{
+      background:linear-gradient(135deg,var(--blue-dark) 0%,var(--blue) 60%,var(--blue-light) 100%);
+      padding:28px 24px 32px;text-align:center;position:relative;overflow:hidden;
+    }
+    .header::before{
+      content:'';position:absolute;inset:0;
+      background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+    .header-icon{font-size:44px;margin-bottom:8px;position:relative}
+    .header h1{font-size:24px;font-weight:800;color:#fff;position:relative}
+    .header p{font-size:13.5px;color:rgba(255,255,255,.75);margin-top:6px;position:relative}
+
+    /* ── Progress bar ── */
+    .progress-wrap{background:#fff;border-bottom:1px solid var(--border);padding:16px 24px;position:sticky;top:0;z-index:10;box-shadow:0 2px 12px rgba(13,71,161,.08)}
+    .progress-steps{display:flex;align-items:center;justify-content:center;gap:0;max-width:500px;margin:0 auto}
+    .step{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;position:relative}
+    .step:not(:last-child)::after{content:'';position:absolute;top:14px;left:50%;width:100%;height:2px;background:var(--border);z-index:0;transition:.3s}
+    .step.done:not(:last-child)::after{background:var(--blue)}
+    .step-circle{
+      width:28px;height:28px;border-radius:50%;background:var(--border);
+      display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;
+      color:var(--muted);z-index:1;transition:.3s;
+    }
+    .step.active .step-circle{background:var(--blue);color:#fff;box-shadow:0 0 0 4px rgba(21,101,192,.2)}
+    .step.done .step-circle{background:var(--success);color:#fff}
+    .step-label{font-size:10px;font-weight:600;color:var(--muted);text-align:center;white-space:nowrap}
+    .step.active .step-label{color:var(--blue)}
+    .step.done .step-label{color:var(--success)}
+
+    /* ── Form sections ── */
+    .form-wrap{max-width:780px;margin:28px auto;padding:0 16px}
+
+    .section{
+      background:var(--white);border-radius:16px;padding:24px 28px;
+      box-shadow:0 4px 20px rgba(13,71,161,.08);border:1px solid var(--border);
+      margin-bottom:20px;display:none;
+    }
+    .section.active{display:block;animation:fadeIn .3s ease}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+    .section-title{display:flex;align-items:center;gap:10px;margin-bottom:20px;padding-bottom:14px;border-bottom:2px solid var(--bg)}
+    .section-icon{font-size:22px;width:42px;height:42px;background:linear-gradient(135deg,var(--blue),var(--blue-dark));border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .section-title h2{font-size:16px;font-weight:700;color:var(--text)}
+    .section-title p{font-size:12px;color:var(--muted);margin-top:1px}
+
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .grid.three{grid-template-columns:1fr 1fr 1fr}
+    .grid.full{grid-template-columns:1fr}
+
+    .field{display:flex;flex-direction:column;gap:5px}
+    .field label{font-size:12px;font-weight:700;color:var(--text);letter-spacing:.3px;text-transform:uppercase}
+    .field input,.field select,.field textarea{
+      padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;
+      font-size:14px;font-family:inherit;color:var(--text);background:#FAFBFD;
+      outline:none;transition:.18s;width:100%;
+    }
+    .field input:focus,.field select:focus,.field textarea:focus{
+      border-color:var(--blue-light);background:#fff;box-shadow:0 0 0 3px rgba(30,136,229,.1)
+    }
+    .field textarea{resize:vertical;min-height:80px;line-height:1.55}
+    .field input::placeholder,.field textarea::placeholder{color:#9AA5B1}
+
+    /* ── Navigation buttons ── */
+    .btn-row{display:flex;gap:12px;justify-content:flex-end;margin-top:24px}
+    .btn{
+      padding:12px 28px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;transition:.18s;border:none;
+    }
+    .btn-outline{background:#fff;border:2px solid var(--border);color:var(--muted)}
+    .btn-outline:hover{border-color:var(--blue-light);color:var(--blue)}
+    .btn-primary{background:linear-gradient(135deg,var(--blue),var(--blue-dark));color:#fff;box-shadow:0 4px 14px rgba(13,71,161,.3)}
+    .btn-primary:hover{box-shadow:0 6px 20px rgba(13,71,161,.4);transform:translateY(-1px)}
+    .btn-primary:active{transform:translateY(0)}
+    .btn-success{background:linear-gradient(135deg,#43A047,#2E7D32);color:#fff;box-shadow:0 4px 14px rgba(67,160,71,.3)}
+    .btn-success:hover{box-shadow:0 6px 20px rgba(67,160,71,.4);transform:translateY(-1px)}
+
+    /* ── Summary card ── */
+    .summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .summary-item{background:var(--bg);border-radius:10px;padding:12px 14px}
+    .summary-item .s-label{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+    .summary-item .s-val{font-size:13.5px;color:var(--text);margin-top:3px;font-weight:500}
+
+    .required{color:#E53935;margin-left:2px}
+
+    @media(max-width:600px){
+      .grid,.grid.three{grid-template-columns:1fr}
+      .summary-grid{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-icon">⚕️</div>
+  <h1>MedBot Patient Registration</h1>
+  <p>Please fill in your details so we can personalise your experience</p>
+</div>
+
+<div class="progress-wrap">
+  <div class="progress-steps">
+    <div class="step active" id="step-1"><div class="step-circle">1</div><div class="step-label">Personal</div></div>
+    <div class="step" id="step-2"><div class="step-circle">2</div><div class="step-label">Medical</div></div>
+    <div class="step" id="step-3"><div class="step-circle">3</div><div class="step-label">Emergency</div></div>
+    <div class="step" id="step-4"><div class="step-circle">4</div><div class="step-label">Symptoms</div></div>
+    <div class="step" id="step-5"><div class="step-circle">✓</div><div class="step-label">Confirm</div></div>
+  </div>
+</div>
+
+<div class="form-wrap">
+
+  <!-- ── Section 1: Personal Info ── -->
+  <div class="section active" id="sec-1">
+    <div class="section-title">
+      <div class="section-icon">👤</div>
+      <div><h2>Personal Information</h2><p>Basic details about you</p></div>
+    </div>
+    <div class="grid">
+      <div class="field"><label>Full Name <span class="required">*</span></label><input id="f-name" type="text" placeholder="Enter your full name" /></div>
+      <div class="field"><label>Age <span class="required">*</span></label><input id="f-age" type="number" placeholder="Your age" min="0" max="120" /></div>
+      <div class="field"><label>Gender <span class="required">*</span></label>
+        <select id="f-gender">
+          <option value="">Select gender</option>
+          <option>Male</option><option>Female</option><option>Non-binary</option><option>Prefer not to say</option>
+        </select>
+      </div>
+      <div class="field"><label>Phone Number <span class="required">*</span></label><input id="f-phone" type="tel" placeholder="+91 9876543210" /></div>
+      <div class="field"><label>Email Address</label><input id="f-email" type="email" placeholder="you@example.com" /></div>
+      <div class="field"><label>Blood Group</label>
+        <select id="f-blood">
+          <option value="">Select blood group</option>
+          <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+          <option>O+</option><option>O-</option><option>AB+</option><option>AB-</option><option>Unknown</option>
+        </select>
+      </div>
+    </div>
+    <div class="grid" style="margin-top:16px">
+      <div class="field"><label>Height (cm)</label><input id="f-height" type="text" placeholder="e.g. 170 cm" /></div>
+      <div class="field"><label>Weight (kg)</label><input id="f-weight" type="text" placeholder="e.g. 65 kg" /></div>
+    </div>
+    <div class="btn-row"><button class="btn btn-primary" onclick="goStep(2)">Next &rarr;</button></div>
+  </div>
+
+  <!-- ── Section 2: Medical History ── -->
+  <div class="section" id="sec-2">
+    <div class="section-title">
+      <div class="section-icon">🏥</div>
+      <div><h2>Medical History</h2><p>Your current health status</p></div>
+    </div>
+    <div class="grid full">
+      <div class="field">
+        <label>Existing Medical Conditions</label>
+        <textarea id="f-conditions" placeholder="e.g. Diabetes, Hypertension, Asthma — or write None"></textarea>
+      </div>
+      <div class="field">
+        <label>Current Medications</label>
+        <textarea id="f-medications" placeholder="List any medications you are currently taking — or write None"></textarea>
+      </div>
+      <div class="field">
+        <label>Known Allergies</label>
+        <textarea id="f-allergies" placeholder="e.g. Penicillin, Peanuts, Latex — or write None"></textarea>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-outline" onclick="goStep(1)">&larr; Back</button>
+      <button class="btn btn-primary" onclick="goStep(3)">Next &rarr;</button>
+    </div>
+  </div>
+
+  <!-- ── Section 3: Emergency Contact ── -->
+  <div class="section" id="sec-3">
+    <div class="section-title">
+      <div class="section-icon">🆘</div>
+      <div><h2>Emergency Contact</h2><p>Someone we can reach in an emergency</p></div>
+    </div>
+    <div class="grid full">
+      <div class="field">
+        <label>Emergency Contact (Name &amp; Phone)</label>
+        <input id="f-emergency" type="text" placeholder="e.g. Riya Sharma — +91 9876543210 (Mother)" />
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-outline" onclick="goStep(2)">&larr; Back</button>
+      <button class="btn btn-primary" onclick="goStep(4)">Next &rarr;</button>
+    </div>
+  </div>
+
+  <!-- ── Section 4: Symptoms ── -->
+  <div class="section" id="sec-4">
+    <div class="section-title">
+      <div class="section-icon">🩺</div>
+      <div><h2>Symptoms / Reason for Visit</h2><p>Tell us why you're here today</p></div>
+    </div>
+    <div class="grid full">
+      <div class="field">
+        <label>Current Symptoms or Reason for Visit <span class="required">*</span></label>
+        <textarea id="f-symptoms" style="min-height:120px" placeholder="Describe your symptoms, how long you've had them, and any relevant details…"></textarea>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-outline" onclick="goStep(3)">&larr; Back</button>
+      <button class="btn btn-primary" onclick="goStep(5)">Review &rarr;</button>
+    </div>
+  </div>
+
+  <!-- ── Section 5: Confirmation ── -->
+  <div class="section" id="sec-5">
+    <div class="section-title">
+      <div class="section-icon">✅</div>
+      <div><h2>Review &amp; Confirm</h2><p>Please check your information before continuing</p></div>
+    </div>
+    <div class="summary-grid" id="summary-grid"></div>
+    <div class="btn-row" style="margin-top:20px">
+      <button class="btn btn-outline" onclick="goStep(4)">&larr; Edit</button>
+      <button class="btn btn-success" id="submit-btn" onclick="submitForm()">Start My Consultation ✓</button>
+    </div>
+  </div>
+
+</div><!-- /form-wrap -->
+
+<script>
+let currentStep = 1;
+
+function goStep(n) {
+  if (n > currentStep && !validate(currentStep)) return;
+
+  // Update sections
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById(`sec-${n}`).classList.add('active');
+
+  // Update progress
+  for (let i = 1; i <= 5; i++) {
+    const el = document.getElementById(`step-${i}`);
+    el.classList.remove('active', 'done');
+    if (i < n) el.classList.add('done');
+    else if (i === n) el.classList.add('active');
+  }
+
+  currentStep = n;
+  if (n === 5) buildSummary();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function validate(step) {
+  if (step === 1) {
+    if (!v('f-name'))    { alert('Please enter your full name.');    focus('f-name');    return false; }
+    if (!v('f-age'))     { alert('Please enter your age.');          focus('f-age');     return false; }
+    if (!v('f-gender'))  { alert('Please select your gender.');      focus('f-gender');  return false; }
+    if (!v('f-phone'))   { alert('Please enter your phone number.'); focus('f-phone');   return false; }
+  }
+  if (step === 4) {
+    if (!v('f-symptoms')) { alert('Please describe your symptoms.'); focus('f-symptoms'); return false; }
+  }
+  return true;
+}
+
+function v(id) { return document.getElementById(id).value.trim(); }
+function focus(id) { document.getElementById(id).focus(); }
+
+function buildSummary() {
+  const fields = [
+    ['👤 Name',        v('f-name')],
+    ['🎂 Age',         v('f-age') ? v('f-age') + ' years' : '—'],
+    ['⚧ Gender',       v('f-gender') || '—'],
+    ['📞 Phone',       v('f-phone')],
+    ['📧 Email',       v('f-email') || '—'],
+    ['🩸 Blood Group', v('f-blood') || '—'],
+    ['📏 Height',      v('f-height') || '—'],
+    ['⚖️ Weight',       v('f-weight') || '—'],
+    ['🏥 Conditions',  v('f-conditions') || 'None'],
+    ['💊 Medications', v('f-medications') || 'None'],
+    ['🌿 Allergies',   v('f-allergies') || 'None'],
+    ['🆘 Emergency',   v('f-emergency') || '—'],
+    ['🩺 Symptoms',    v('f-symptoms')],
+  ];
+  document.getElementById('summary-grid').innerHTML = fields.map(([l, val]) => `
+    <div class="summary-item">
+      <div class="s-label">${l}</div>
+      <div class="s-val">${val}</div>
+    </div>`).join('');
+}
+
+async function submitForm() {
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+
+  const uuid = crypto.randomUUID ? crypto.randomUUID() : 'u' + Date.now() + Math.random().toString(36).slice(2);
+  const data = {
+    uuid,
+    name:               v('f-name'),
+    age:                v('f-age'),
+    gender:             v('f-gender'),
+    phone:              v('f-phone'),
+    email:              v('f-email'),
+    blood_group:        v('f-blood'),
+    height:             v('f-height'),
+    weight:             v('f-weight'),
+    medical_conditions: v('f-conditions'),
+    medications:        v('f-medications'),
+    allergies:          v('f-allergies'),
+    emergency_contact:  v('f-emergency'),
+    symptoms:           v('f-symptoms'),
+  };
+
+  localStorage.setItem('medbot_patient', JSON.stringify(data));
+
+  try {
+    await fetch('/patient/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+  } catch { /* non-critical */ }
+
+  window.location.href = '/chat';
+}
+</script>
+</body>
+</html>

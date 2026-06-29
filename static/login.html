@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MedBot Admin — Login</title>
+  <style>
+    :root {
+      --blue:#1565C0; --blue-light:#1E88E5; --blue-dark:#0D47A1;
+      --bg:#F0F4F9; --white:#FFFFFF; --text:#1A1A2E; --muted:#607D8B;
+      --border:#DCE4F0; --error:#EF5350; --success:#43A047;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%;font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg)}
+
+    .page{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+
+    .card{
+      background:var(--white);border-radius:20px;box-shadow:0 8px 40px rgba(13,71,161,.13);
+      width:100%;max-width:440px;overflow:hidden;
+    }
+
+    .card-header{
+      background:linear-gradient(135deg,var(--blue),var(--blue-dark));
+      padding:32px 36px 28px;text-align:center;
+    }
+    .logo{font-size:42px;margin-bottom:10px}
+    .card-header h1{font-size:22px;font-weight:700;color:#fff}
+    .card-header p{font-size:13px;color:rgba(255,255,255,.7);margin-top:4px}
+
+    .tabs{display:flex;border-bottom:2px solid var(--border);background:#fff}
+    .tab{
+      flex:1;padding:14px;font-size:14px;font-weight:600;color:var(--muted);
+      cursor:pointer;border:none;background:transparent;transition:.18s;border-bottom:2px solid transparent;margin-bottom:-2px;
+    }
+    .tab.active{color:var(--blue);border-bottom-color:var(--blue)}
+    .tab:hover:not(.active){color:var(--blue-light)}
+
+    .form-body{padding:28px 36px 32px}
+
+    .field{margin-bottom:18px}
+    .field label{display:block;font-size:12.5px;font-weight:600;color:var(--text);margin-bottom:6px;letter-spacing:.3px}
+    .field input{
+      width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;
+      font-size:14px;font-family:inherit;color:var(--text);background:#FAFBFD;
+      outline:none;transition:.18s;
+    }
+    .field input:focus{border-color:var(--blue-light);background:#fff;box-shadow:0 0 0 3px rgba(30,136,229,.1)}
+    .field input::placeholder{color:#9AA5B1}
+
+    .or-row{display:flex;align-items:center;gap:10px;margin:4px 0 16px}
+    .or-row span{font-size:12px;color:var(--muted);white-space:nowrap}
+    .or-row hr{flex:1;border:none;border-top:1px solid var(--border)}
+
+    .identifier-tabs{display:flex;gap:8px;margin-bottom:6px}
+    .id-tab{
+      flex:1;padding:7px;border:1.5px solid var(--border);border-radius:8px;
+      font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer;background:#FAFBFD;transition:.15s;text-align:center;
+    }
+    .id-tab.active{border-color:var(--blue);color:var(--blue);background:#EEF4FF}
+
+    .submit-btn{
+      width:100%;padding:13px;background:var(--blue);color:#fff;border:none;
+      border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;transition:.18s;margin-top:6px;
+    }
+    .submit-btn:hover{background:var(--blue-light)}
+    .submit-btn:active{transform:scale(.98)}
+    .submit-btn:disabled{background:#B0BEC5;cursor:not-allowed}
+
+    .msg{
+      margin-top:14px;padding:10px 14px;border-radius:8px;font-size:13px;
+      display:none;
+    }
+    .msg.error{background:#FFEBEE;color:var(--error);border:1px solid #FFCDD2;display:block}
+    .msg.success{background:#E8F5E9;color:var(--success);border:1px solid #C8E6C9;display:block}
+
+    .footer-note{text-align:center;font-size:12px;color:var(--muted);margin-top:18px}
+    .footer-note a{color:var(--blue);text-decoration:none;font-weight:600}
+    .footer-note a:hover{text-decoration:underline}
+
+    .spinner{
+      display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.4);
+      border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px;
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
+  </style>
+</head>
+<body>
+<div class="page">
+  <div class="card">
+    <div class="card-header">
+      <div class="logo">⚕️</div>
+      <h1>MedBot Admin</h1>
+      <p>Medical Chatbot Management Panel</p>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" id="tab-login" onclick="switchTab('login')">Login</button>
+      <button class="tab" id="tab-signup" onclick="switchTab('signup')">Sign Up</button>
+    </div>
+
+    <!-- ── LOGIN FORM ── -->
+    <div class="form-body" id="login-form">
+      <div class="field">
+        <label>Email or Phone Number</label>
+        <input type="text" id="login-identifier" placeholder="Enter email or phone number" autocomplete="username" />
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="login-password" placeholder="Enter your password" autocomplete="current-password" />
+      </div>
+      <button class="submit-btn" id="login-btn" onclick="doLogin()">Login to Admin Panel</button>
+      <div class="msg" id="login-msg"></div>
+      <div class="footer-note" style="margin-top:14px">
+        Don't have an account? <a href="#" onclick="switchTab('signup');return false">Sign up here</a>
+      </div>
+    </div>
+
+    <!-- ── SIGNUP FORM ── -->
+    <div class="form-body" id="signup-form" style="display:none">
+      <div class="field">
+        <label>Full Name</label>
+        <input type="text" id="signup-name" placeholder="Your full name" autocomplete="name" />
+      </div>
+
+      <div class="field">
+        <label>Contact Method</label>
+        <div class="identifier-tabs">
+          <div class="id-tab active" id="id-tab-email" onclick="switchIdentifier('email')">Email</div>
+          <div class="id-tab" id="id-tab-phone" onclick="switchIdentifier('phone')">Phone Number</div>
+        </div>
+        <input type="email" id="signup-email" placeholder="Enter your email address" autocomplete="email" />
+        <input type="tel" id="signup-phone" placeholder="Enter your phone number (e.g. +91 9876543210)" autocomplete="tel" style="display:none;margin-top:6px" />
+      </div>
+
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="signup-password" placeholder="Min 6 characters" autocomplete="new-password" />
+      </div>
+      <div class="field">
+        <label>Confirm Password</label>
+        <input type="password" id="signup-confirm" placeholder="Repeat your password" autocomplete="new-password" />
+      </div>
+
+      <button class="submit-btn" id="signup-btn" onclick="doSignup()">Create Admin Account</button>
+      <div class="msg" id="signup-msg"></div>
+      <div class="footer-note" style="margin-top:14px">
+        Already have an account? <a href="#" onclick="switchTab('login');return false">Login here</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let identifierMode = 'email'; // 'email' | 'phone'
+
+function switchTab(tab) {
+  document.getElementById('login-form').style.display  = tab === 'login'  ? '' : 'none';
+  document.getElementById('signup-form').style.display = tab === 'signup' ? '' : 'none';
+  document.getElementById('tab-login').classList.toggle('active',  tab === 'login');
+  document.getElementById('tab-signup').classList.toggle('active', tab === 'signup');
+  clearMsgs();
+}
+
+function switchIdentifier(mode) {
+  identifierMode = mode;
+  document.getElementById('id-tab-email').classList.toggle('active', mode === 'email');
+  document.getElementById('id-tab-phone').classList.toggle('active', mode === 'phone');
+  document.getElementById('signup-email').style.display = mode === 'email' ? '' : 'none';
+  document.getElementById('signup-phone').style.display = mode === 'phone' ? '' : 'none';
+}
+
+function clearMsgs() {
+  ['login-msg','signup-msg'].forEach(id => {
+    const el = document.getElementById(id);
+    el.className = 'msg';
+    el.textContent = '';
+  });
+}
+
+function showMsg(id, text, type) {
+  const el = document.getElementById(id);
+  el.className = `msg ${type}`;
+  el.textContent = text;
+}
+
+function setLoading(btnId, loading) {
+  const btn = document.getElementById(btnId);
+  if (loading) {
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Please wait…';
+  } else {
+    btn.disabled = false;
+    btn.innerHTML = btnId === 'login-btn' ? 'Login to Admin Panel' : 'Create Admin Account';
+  }
+}
+
+async function doLogin() {
+  const identifier = document.getElementById('login-identifier').value.trim();
+  const password   = document.getElementById('login-password').value;
+
+  if (!identifier) return showMsg('login-msg', 'Please enter your email or phone number.', 'error');
+  if (!password)   return showMsg('login-msg', 'Please enter your password.', 'error');
+
+  setLoading('login-btn', true);
+  try {
+    const res = await fetch('/auth/login', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({identifier, password}),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      showMsg('login-msg', data.detail || 'Login failed.', 'error');
+    } else {
+      localStorage.setItem('admin_token', data.token);
+      localStorage.setItem('admin_name', data.name);
+      localStorage.removeItem('medbot_patient');
+      showMsg('login-msg', 'Login successful! Redirecting…', 'success');
+      setTimeout(() => { window.location.href = '/admin'; }, 800);
+    }
+  } catch {
+    showMsg('login-msg', 'Cannot reach server. Is uvicorn running?', 'error');
+  } finally {
+    setLoading('login-btn', false);
+  }
+}
+
+async function doSignup() {
+  const name     = document.getElementById('signup-name').value.trim();
+  const email    = identifierMode === 'email' ? document.getElementById('signup-email').value.trim() : '';
+  const phone    = identifierMode === 'phone' ? document.getElementById('signup-phone').value.trim() : '';
+  const password = document.getElementById('signup-password').value;
+  const confirm  = document.getElementById('signup-confirm').value;
+
+  if (!name)              return showMsg('signup-msg', 'Please enter your full name.', 'error');
+  if (!email && !phone)   return showMsg('signup-msg', 'Please enter an email or phone number.', 'error');
+  if (password.length < 6) return showMsg('signup-msg', 'Password must be at least 6 characters.', 'error');
+  if (password !== confirm) return showMsg('signup-msg', 'Passwords do not match.', 'error');
+
+  setLoading('signup-btn', true);
+  try {
+    const res = await fetch('/auth/register', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({name, email, phone, password}),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      showMsg('signup-msg', data.detail || 'Registration failed.', 'error');
+    } else {
+      localStorage.setItem('admin_token', data.token);
+      localStorage.setItem('admin_name', data.name);
+      localStorage.removeItem('medbot_patient');
+      showMsg('signup-msg', 'Account created! Redirecting to admin panel…', 'success');
+      setTimeout(() => { window.location.href = '/admin'; }, 900);
+    }
+  } catch {
+    showMsg('signup-msg', 'Cannot reach server. Is uvicorn running?', 'error');
+  } finally {
+    setLoading('signup-btn', false);
+  }
+}
+
+// Enter key support
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  const loginVisible = document.getElementById('login-form').style.display !== 'none';
+  if (loginVisible) doLogin();
+  else doSignup();
+});
+
+// Redirect to admin if already logged in
+</script>
+</body>
+</html>

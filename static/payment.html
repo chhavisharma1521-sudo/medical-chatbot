@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MedBot — Secure Payment</title>
+  <style>
+    :root{
+      --blue:#1565C0;--blue-dark:#0D47A1;--blue-light:#1E88E5;
+      --green:#2E7D32;--green-light:#43A047;
+      --bg:#F0F4FF;--white:#fff;--text:#1A1A2E;--muted:#607D8B;
+      --border:#DCE4F0;--error:#E53935;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);min-height:100vh}
+
+    /* ── Topnav ── */
+    .topnav{background:linear-gradient(135deg,var(--blue-dark),var(--blue));padding:0 32px;height:64px;display:flex;align-items:center;gap:14px;box-shadow:0 4px 20px rgba(13,71,161,.25);position:sticky;top:0;z-index:100}
+    .nav-logo{font-size:26px}
+    .nav-title{font-size:18px;font-weight:800;color:#fff}
+    .nav-sub{font-size:11px;color:rgba(255,255,255,.55);margin-top:1px}
+    .nav-secure{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:rgba(255,255,255,.8)}
+    .lock-icon{font-size:16px}
+    .nav-back{padding:8px 18px;border:1.5px solid rgba(255,255,255,.3);border-radius:10px;color:rgba(255,255,255,.9);font-size:13px;font-weight:600;text-decoration:none;transition:.18s;margin-left:16px}
+    .nav-back:hover{background:rgba(255,255,255,.12)}
+
+    /* ── Layout ── */
+    .page{max-width:900px;margin:32px auto;padding:0 20px 60px;display:grid;grid-template-columns:1fr 1.3fr;gap:22px;align-items:start}
+
+    /* ── Order Summary ── */
+    .summary-card{background:var(--white);border-radius:18px;overflow:hidden;box-shadow:0 4px 20px rgba(13,71,161,.09);border:1px solid var(--border)}
+    .summary-head{background:linear-gradient(135deg,var(--blue-dark),var(--blue));padding:20px 22px;color:#fff}
+    .summary-head h3{font-size:15px;font-weight:700}
+    .summary-head p{font-size:11.5px;opacity:.7;margin-top:2px}
+    .summary-body{padding:20px 22px}
+    .doc-summary-row{display:flex;align-items:center;gap:12px;margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+    .doc-sum-av{width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#fff;flex-shrink:0;background:linear-gradient(135deg,var(--blue),var(--blue-dark))}
+    .doc-sum-name{font-size:15px;font-weight:700;color:var(--text)}
+    .doc-sum-spec{font-size:12px;color:var(--muted);margin-top:2px}
+
+    .detail-rows{display:flex;flex-direction:column;gap:10px;margin-bottom:18px}
+    .detail-row{display:flex;align-items:center;gap:10px;font-size:13.5px}
+    .detail-icon{font-size:16px;width:22px;text-align:center;flex-shrink:0}
+    .detail-val{font-weight:600;color:var(--text)}
+    .detail-lbl{color:var(--muted)}
+
+    .price-breakdown{background:#F7F9FF;border-radius:12px;padding:14px 16px}
+    .price-row{display:flex;justify-content:space-between;font-size:13.5px;color:var(--muted);margin-bottom:8px}
+    .price-row.total{font-size:16px;font-weight:800;color:var(--blue);border-top:1px solid var(--border);padding-top:10px;margin-bottom:0;margin-top:4px}
+    .price-row.total span:last-child{font-size:18px}
+
+    .secure-badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+    .badge{display:flex;align-items:center;gap:5px;padding:5px 12px;background:#F0F4FF;border-radius:20px;font-size:11.5px;color:var(--muted);font-weight:600;border:1px solid var(--border)}
+
+    /* ── Payment Card ── */
+    .pay-card{background:var(--white);border-radius:18px;overflow:hidden;box-shadow:0 4px 20px rgba(13,71,161,.09);border:1px solid var(--border)}
+    .pay-head{padding:18px 22px 0;border-bottom:1px solid var(--border)}
+    .pay-head h3{font-size:15px;font-weight:700;color:var(--text);margin-bottom:14px}
+
+    /* Method tabs */
+    .method-tabs{display:flex;gap:0}
+    .m-tab{
+      flex:1;padding:12px 8px;border:none;background:transparent;cursor:pointer;
+      font-size:13px;font-weight:600;color:var(--muted);border-bottom:2.5px solid transparent;
+      transition:.18s;display:flex;flex-direction:column;align-items:center;gap:4px;
+    }
+    .m-tab-icon{font-size:20px}
+    .m-tab.active{color:var(--blue);border-bottom-color:var(--blue)}
+    .m-tab:hover:not(.active){color:var(--blue-light)}
+
+    .pay-body{padding:22px}
+
+    /* ── UPI ── */
+    .upi-panel,.card-panel,.nb-panel{display:none}
+    .upi-panel.active,.card-panel.active,.nb-panel.active{display:block}
+
+    .qr-wrap{text-align:center;margin-bottom:20px}
+    .qr-box{
+      width:160px;height:160px;margin:0 auto 10px;border-radius:14px;
+      background:linear-gradient(135deg,#f8f9ff,#eef2ff);
+      border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;
+      flex-direction:column;gap:6px;
+    }
+    .qr-box span{font-size:48px}
+    .qr-lbl{font-size:12px;color:var(--muted)}
+    .qr-timer{font-size:13px;font-weight:700;color:var(--error);margin-top:4px}
+    .or-divider{display:flex;align-items:center;gap:10px;margin:16px 0}
+    .or-divider hr{flex:1;border:none;border-top:1px solid var(--border)}
+    .or-divider span{font-size:12px;color:var(--muted);font-weight:600}
+
+    .upi-input-row{display:flex;gap:8px}
+    .upi-input{flex:1;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;color:var(--text);outline:none;transition:.18s;background:#FAFBFD}
+    .upi-input:focus{border-color:var(--blue-light);background:#fff;box-shadow:0 0 0 3px rgba(30,136,229,.1)}
+    .verify-btn{padding:11px 18px;border-radius:10px;border:none;background:var(--bg);color:var(--blue);font-size:13.5px;font-weight:700;cursor:pointer;transition:.15s;border:1.5px solid var(--border)}
+    .verify-btn:hover{background:#EEF4FF;border-color:var(--blue-light)}
+
+    .upi-apps{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px}
+    .upi-app{
+      padding:12px 6px;border-radius:12px;border:1.5px solid var(--border);
+      display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;transition:.18s;
+    }
+    .upi-app:hover{border-color:var(--blue-light);background:#EEF4FF;transform:translateY(-2px)}
+    .upi-app.selected{border-color:var(--blue);background:#EEF4FF}
+    .upi-app-icon{font-size:26px}
+    .upi-app-name{font-size:11px;font-weight:600;color:var(--muted)}
+
+    /* ── Credit Card ── */
+    .card-preview-wrap{perspective:1000px;margin-bottom:20px}
+    .card-preview{
+      width:100%;height:180px;border-radius:16px;position:relative;
+      background:linear-gradient(135deg,#1A237E,#1565C0,#0D47A1);
+      box-shadow:0 12px 32px rgba(13,71,161,.35);
+      padding:22px 24px;color:#fff;overflow:hidden;
+      transition:transform .6s;transform-style:preserve-3d;
+    }
+    .card-preview.flipped{transform:rotateY(180deg)}
+    .card-front,.card-back{position:absolute;inset:0;border-radius:16px;padding:22px 24px;backface-visibility:hidden}
+    .card-front{background:linear-gradient(135deg,#1A237E,#1565C0,#0D47A1);overflow:hidden}
+    .card-front::before{content:'';position:absolute;top:-40px;right:-40px;width:200px;height:200px;border-radius:50%;background:rgba(255,255,255,.05)}
+    .card-front::after{content:'';position:absolute;bottom:-60px;left:-20px;width:240px;height:240px;border-radius:50%;background:rgba(255,255,255,.04)}
+    .card-back{background:linear-gradient(135deg,#0D47A1,#1565C0);transform:rotateY(180deg)}
+    .card-chip{font-size:28px;margin-bottom:12px;position:relative}
+    .card-number-disp{font-size:17px;letter-spacing:3px;font-weight:600;position:relative;margin-bottom:14px;font-family:monospace}
+    .card-bottom{display:flex;justify-content:space-between;align-items:flex-end;position:relative}
+    .card-name-disp,.card-exp-disp{display:flex;flex-direction:column;gap:2px}
+    .cd-label{font-size:9px;opacity:.6;text-transform:uppercase;letter-spacing:.8px}
+    .cd-val{font-size:13px;font-weight:700;text-transform:uppercase}
+    .card-brand{font-size:11px;font-weight:800;letter-spacing:1px;opacity:.85}
+    .cvv-strip{background:#000;height:44px;width:100%;margin:22px 0 12px;border-radius:4px}
+    .cvv-box{display:flex;justify-content:flex-end}
+    .cvv-display{background:#f0f0f0;border-radius:6px;padding:6px 16px;font-size:15px;font-family:monospace;color:#333;font-weight:700;letter-spacing:3px}
+    .cvv-text{font-size:11px;text-align:right;color:rgba(255,255,255,.6);margin-top:6px}
+
+    .card-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .card-fields .full{grid-column:1/-1}
+    .cf-field{display:flex;flex-direction:column;gap:5px}
+    .cf-field label{font-size:11.5px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.3px}
+    .cf-field input{padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;color:var(--text);outline:none;transition:.18s;background:#FAFBFD;letter-spacing:.5px}
+    .cf-field input:focus{border-color:var(--blue-light);background:#fff;box-shadow:0 0 0 3px rgba(30,136,229,.1)}
+
+    /* ── Net Banking ── */
+    .banks-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+    .bank-item{
+      padding:14px 8px;border:1.5px solid var(--border);border-radius:12px;
+      display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;transition:.18s;
+    }
+    .bank-item:hover{border-color:var(--blue-light);background:#EEF4FF;transform:translateY(-2px)}
+    .bank-item.selected{border-color:var(--blue);background:#EEF4FF;box-shadow:0 0 0 3px rgba(21,101,192,.1)}
+    .bank-icon{font-size:28px}
+    .bank-name{font-size:11.5px;font-weight:700;color:var(--text);text-align:center}
+    .bank-type{font-size:10px;color:var(--muted)}
+    .more-banks{padding:10px 14px;border:1.5px dashed var(--border);border-radius:10px;font-size:13px;color:var(--muted);cursor:pointer;text-align:center;transition:.15s}
+    .more-banks:hover{border-color:var(--blue-light);color:var(--blue)}
+
+    /* ── Pay button ── */
+    .pay-btn{
+      width:100%;padding:15px;border-radius:12px;border:none;cursor:pointer;font-size:15px;font-weight:800;color:#fff;
+      background:linear-gradient(135deg,var(--green-light),var(--green));
+      box-shadow:0 6px 20px rgba(46,125,50,.35);transition:.2s;margin-top:16px;
+      display:flex;align-items:center;justify-content:center;gap:8px;
+    }
+    .pay-btn:hover{box-shadow:0 10px 28px rgba(46,125,50,.45);transform:translateY(-2px)}
+    .pay-btn:active{transform:translateY(0)}
+    .pay-btn:disabled{background:#B0BEC5;box-shadow:none;cursor:not-allowed}
+
+    /* ── Success overlay ── */
+    .success-overlay{
+      position:fixed;inset:0;background:rgba(240,244,255,.97);z-index:900;
+      display:flex;align-items:center;justify-content:center;flex-direction:column;
+      text-align:center;padding:32px;display:none;
+    }
+    .success-overlay.show{display:flex;animation:fadeIn .35s ease}
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    .success-ring{
+      width:110px;height:110px;border-radius:50%;background:linear-gradient(135deg,var(--green-light),var(--green));
+      display:flex;align-items:center;justify-content:center;font-size:52px;
+      box-shadow:0 12px 40px rgba(46,125,50,.35);margin-bottom:22px;
+      animation:popIn .5s cubic-bezier(.34,1.56,.64,1);
+    }
+    @keyframes popIn{0%{transform:scale(0)}100%{transform:scale(1)}}
+    .success-overlay h2{font-size:26px;font-weight:800;color:var(--text);margin-bottom:8px}
+    .success-overlay p{font-size:14px;color:var(--muted);max-width:340px;line-height:1.65;margin-bottom:24px}
+    .receipt{background:var(--white);border-radius:16px;padding:20px 26px;border:1px solid var(--border);box-shadow:0 4px 18px rgba(13,71,161,.08);text-align:left;width:100%;max-width:380px;margin-bottom:22px}
+    .receipt-row{display:flex;justify-content:space-between;font-size:13.5px;margin-bottom:8px}
+    .receipt-row:last-child{margin-bottom:0;font-weight:700;font-size:15px;color:var(--green);border-top:1px solid var(--border);padding-top:8px;margin-top:4px}
+    .receipt-lbl{color:var(--muted)}
+    .home-btn{padding:13px 36px;border-radius:12px;background:var(--blue);color:#fff;border:none;font-size:15px;font-weight:700;cursor:pointer;transition:.15s;box-shadow:0 4px 16px rgba(21,101,192,.3)}
+    .home-btn:hover{background:var(--blue-light);box-shadow:0 7px 22px rgba(21,101,192,.4)}
+
+    /* Spinner */
+    .spinner{display:inline-block;width:18px;height:18px;border:2.5px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    @media(max-width:700px){
+      .page{grid-template-columns:1fr}
+      .topnav{padding:0 16px}
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══ TOPNAV ══ -->
+<nav class="topnav">
+  <div class="nav-logo">⚕️</div>
+  <div>
+    <div class="nav-title">Secure Payment</div>
+    <div class="nav-sub">MedBot Healthcare</div>
+  </div>
+  <div class="nav-secure"><span class="lock-icon">🔒</span> SSL Encrypted</div>
+  <a href="/appointments" class="nav-back">← Back</a>
+</nav>
+
+<!-- ══ MAIN ══ -->
+<div class="page">
+
+  <!-- ── Left: Order Summary ── -->
+  <div class="summary-card">
+    <div class="summary-head">
+      <h3>Appointment Summary</h3>
+      <p>Please review before paying</p>
+    </div>
+    <div class="summary-body">
+      <div class="doc-summary-row">
+        <div class="doc-sum-av" id="sum-avatar">👨‍⚕️</div>
+        <div>
+          <div class="doc-sum-name" id="sum-doctor">—</div>
+          <div class="doc-sum-spec" id="sum-spec">—</div>
+        </div>
+      </div>
+      <div class="detail-rows">
+        <div class="detail-row"><span class="detail-icon">👤</span><span class="detail-lbl">Patient:&nbsp;</span><span class="detail-val" id="sum-patient">—</span></div>
+        <div class="detail-row"><span class="detail-icon">📅</span><span class="detail-lbl">Date:&nbsp;</span><span class="detail-val" id="sum-date">—</span></div>
+        <div class="detail-row"><span class="detail-icon">🕐</span><span class="detail-lbl">Time:&nbsp;</span><span class="detail-val" id="sum-time">—</span></div>
+        <div class="detail-row"><span class="detail-icon">🎥</span><span class="detail-lbl">Mode:&nbsp;</span><span class="detail-val">Video Consultation</span></div>
+      </div>
+      <div class="price-breakdown">
+        <div class="price-row"><span>Consultation Fee</span><span id="sum-fee">—</span></div>
+        <div class="price-row"><span>GST (18%)</span><span id="sum-gst">—</span></div>
+        <div class="price-row"><span>Platform Fee</span><span style="color:#2E7D32;font-weight:700">FREE</span></div>
+        <div class="price-row total"><span>Total Payable</span><span id="sum-total">—</span></div>
+      </div>
+      <div class="secure-badges">
+        <div class="badge">🔒 256-bit SSL</div>
+        <div class="badge">✅ RBI Compliant</div>
+        <div class="badge">🛡️ PCI DSS</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Right: Payment Form ── -->
+  <div class="pay-card">
+    <div class="pay-head">
+      <h3>Choose Payment Method</h3>
+      <div class="method-tabs">
+        <button class="m-tab active" onclick="switchMethod('upi', this)">
+          <span class="m-tab-icon">📱</span>UPI
+        </button>
+        <button class="m-tab" onclick="switchMethod('card', this)">
+          <span class="m-tab-icon">💳</span>Card
+        </button>
+        <button class="m-tab" onclick="switchMethod('nb', this)">
+          <span class="m-tab-icon">🏦</span>Net Banking
+        </button>
+      </div>
+    </div>
+
+    <div class="pay-body">
+
+      <!-- UPI -->
+      <div class="upi-panel active" id="panel-upi">
+
+        <!-- Merchant info chip -->
+        <div style="display:flex;align-items:center;gap:12px;background:#F7F9FF;border-radius:12px;padding:12px 16px;margin-bottom:16px;border:1.5px solid #DCE4F0">
+          <div style="width:42px;height:42px;border-radius:10px;background:linear-gradient(135deg,#6A1B9A,#4A148C);display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px;font-weight:800;flex-shrink:0">CS</div>
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:700;color:#1A1A2E">Chhavi Sharma</div>
+            <div style="font-size:12px;color:#607D8B;margin-top:1px">MedBot Healthcare · Verified Merchant</div>
+          </div>
+          <div style="font-size:11px;font-weight:700;color:#2E7D32;background:#E8F5E9;padding:4px 10px;border-radius:20px;border:1px solid #C8E6C9">✓ Verified</div>
+        </div>
+
+        <!-- QR code -->
+        <div class="qr-wrap">
+          <div style="text-align:center;margin-bottom:6px;font-size:11.5px;font-weight:700;color:#607D8B;text-transform:uppercase;letter-spacing:.8px">Scan &amp; Pay</div>
+          <div style="position:relative;display:inline-block">
+            <img
+              id="qr-img"
+              src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=10&data=upi://pay?pa=8595182655@slc%26pn=Chhavi%20Sharma%26cu=INR"
+              alt="UPI QR Code"
+              width="180" height="180"
+              style="border-radius:14px;border:3px solid #DCE4F0;display:block;box-shadow:0 4px 16px rgba(13,71,161,.1)"
+              onerror="this.style.display='none';document.getElementById('qr-fallback').style.display='flex'"
+            />
+            <div id="qr-fallback" style="display:none;width:180px;height:180px;border-radius:14px;border:2px dashed #DCE4F0;align-items:center;justify-content:center;flex-direction:column;gap:6px;background:#F7F9FF">
+              <span style="font-size:40px">▦</span>
+              <span style="font-size:11px;color:#607D8B">QR unavailable offline</span>
+            </div>
+            <!-- Slice logo overlay -->
+            <div style="position:absolute;bottom:8px;right:8px;background:#fff;border-radius:6px;padding:2px 7px;font-size:11px;font-weight:800;color:#6A1B9A;border:1px solid #DCE4F0;box-shadow:0 1px 4px rgba(0,0,0,.1)">slice</div>
+          </div>
+          <div class="qr-timer" id="qr-timer" style="margin-top:8px">⏱ Expires in 9:59</div>
+        </div>
+
+        <!-- UPI ID display -->
+        <div style="background:linear-gradient(135deg,#EEF4FF,#F0F4FF);border:1.5px solid #BBDEFB;border-radius:12px;padding:12px 16px;text-align:center;margin-bottom:14px">
+          <div style="font-size:10.5px;font-weight:700;color:#607D8B;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">UPI ID</div>
+          <div style="font-size:17px;font-weight:800;color:#1565C0;letter-spacing:.5px">8595182655@slc</div>
+          <button onclick="copyUPI()" style="margin-top:6px;padding:4px 14px;border:1.5px solid #BBDEFB;border-radius:20px;background:#fff;color:#1565C0;font-size:12px;font-weight:700;cursor:pointer;transition:.15s" onmouseover="this.style.background='#EEF4FF'" onmouseout="this.style.background='#fff'">📋 Copy UPI ID</button>
+        </div>
+
+        <div class="or-divider"><hr/><span>OR ENTER YOUR UPI ID TO PAY</span><hr/></div>
+
+        <div class="upi-input-row">
+          <input class="upi-input" id="upi-id" type="text" placeholder="yourname@upi" />
+          <button class="verify-btn" onclick="verifyUPI()">Verify</button>
+        </div>
+
+        <div class="or-divider" style="margin-top:14px"><hr/><span>OPEN IN UPI APP</span><hr/></div>
+
+        <div class="upi-apps">
+          <a class="upi-app" href="gpay://upi/pay?pa=8595182655@slc&pn=Chhavi+Sharma&cu=INR" onclick="selectUPIApp(this,'GPay')"><div class="upi-app-icon">🟢</div><div class="upi-app-name">GPay</div></a>
+          <a class="upi-app" href="phonepe://pay?pa=8595182655@slc&pn=Chhavi+Sharma&cu=INR" onclick="selectUPIApp(this,'PhonePe')"><div class="upi-app-icon">🟣</div><div class="upi-app-name">PhonePe</div></a>
+          <a class="upi-app" href="paytmmp://pay?pa=8595182655@slc&pn=Chhavi+Sharma&cu=INR" onclick="selectUPIApp(this,'Paytm')"><div class="upi-app-icon">🔵</div><div class="upi-app-name">Paytm</div></a>
+          <a class="upi-app" href="upi://pay?pa=8595182655@slc&pn=Chhavi+Sharma&cu=INR" onclick="selectUPIApp(this,'BHIM')"><div class="upi-app-icon">🟠</div><div class="upi-app-name">BHIM</div></a>
+        </div>
+
+        <button class="pay-btn" id="upi-pay-btn" onclick="processPayment('UPI')">
+          🔒 Pay <span id="upi-pay-amt">—</span> via UPI
+        </button>
+      </div>
+
+      <!-- Card -->
+      <div class="card-panel" id="panel-card">
+        <div class="card-preview-wrap">
+          <div class="card-preview" id="card-preview">
+            <div class="card-front">
+              <div class="card-chip">💳</div>
+              <div class="card-number-disp" id="card-num-disp">•••• •••• •••• ••••</div>
+              <div class="card-bottom">
+                <div class="card-name-disp"><div class="cd-label">Card Holder</div><div class="cd-val" id="card-name-disp">YOUR NAME</div></div>
+                <div class="card-exp-disp"><div class="cd-label">Expires</div><div class="cd-val" id="card-exp-disp">MM/YY</div></div>
+                <div class="card-brand" id="card-brand-disp">VISA</div>
+              </div>
+            </div>
+            <div class="card-back">
+              <div class="cvv-strip"></div>
+              <div class="cvv-box"><div class="cvv-display" id="cvv-disp">•••</div></div>
+              <div class="cvv-text">CVV</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-fields">
+          <div class="cf-field full">
+            <label>Card Number</label>
+            <input id="cc-num" type="text" placeholder="1234 5678 9012 3456" maxlength="19" oninput="formatCard(this)" />
+          </div>
+          <div class="cf-field full">
+            <label>Name on Card</label>
+            <input id="cc-name" type="text" placeholder="As printed on card" oninput="document.getElementById('card-name-disp').textContent=this.value.toUpperCase()||'YOUR NAME'" />
+          </div>
+          <div class="cf-field">
+            <label>Expiry Date</label>
+            <input id="cc-exp" type="text" placeholder="MM/YY" maxlength="5" oninput="formatExpiry(this)" />
+          </div>
+          <div class="cf-field">
+            <label>CVV</label>
+            <input id="cc-cvv" type="password" placeholder="•••" maxlength="3"
+              onfocus="document.getElementById('card-preview').classList.add('flipped')"
+              onblur="document.getElementById('card-preview').classList.remove('flipped')"
+              oninput="document.getElementById('cvv-disp').textContent=this.value.replace(/./g,'•')||'•••'" />
+          </div>
+        </div>
+
+        <button class="pay-btn" id="card-pay-btn" onclick="processPayment('Card')">
+          🔒 Pay <span id="card-pay-amt">—</span> Securely
+        </button>
+      </div>
+
+      <!-- Net Banking -->
+      <div class="nb-panel" id="panel-nb">
+        <div class="banks-grid">
+          <div class="bank-item" onclick="selectBank(this,'SBI')">
+            <div class="bank-icon">🏦</div><div class="bank-name">State Bank</div><div class="bank-type">of India</div>
+          </div>
+          <div class="bank-item" onclick="selectBank(this,'HDFC')">
+            <div class="bank-icon">🏛️</div><div class="bank-name">HDFC Bank</div><div class="bank-type">Private</div>
+          </div>
+          <div class="bank-item" onclick="selectBank(this,'ICICI')">
+            <div class="bank-icon">🏢</div><div class="bank-name">ICICI Bank</div><div class="bank-type">Private</div>
+          </div>
+          <div class="bank-item" onclick="selectBank(this,'Axis')">
+            <div class="bank-icon">🏬</div><div class="bank-name">Axis Bank</div><div class="bank-type">Private</div>
+          </div>
+          <div class="bank-item" onclick="selectBank(this,'Kotak')">
+            <div class="bank-icon">🏪</div><div class="bank-name">Kotak Bank</div><div class="bank-type">Private</div>
+          </div>
+          <div class="bank-item" onclick="selectBank(this,'PNB')">
+            <div class="bank-icon">🏗️</div><div class="bank-name">Punjab Natl.</div><div class="bank-type">PSU Bank</div>
+          </div>
+          <div class="bank-item" onclick="selectBank(this,'BoB')">
+            <div class="bank-icon">🏦</div><div class="bank-name">Bank of Baroda</div><div class="bank-type">PSU Bank</div>
+          </div>
+          <div class="bank-item" onclick="selectBank(this,'Canara')">
+            <div class="bank-icon">🏛️</div><div class="bank-name">Canara Bank</div><div class="bank-type">PSU Bank</div>
+          </div>
+          <div class="bank-item" onclick="selectBank(this,'YES')">
+            <div class="bank-icon">🏢</div><div class="bank-name">YES Bank</div><div class="bank-type">Private</div>
+          </div>
+        </div>
+        <div class="more-banks" onclick="alert('More banks coming soon!')">+ More Banks</div>
+
+        <button class="pay-btn" id="nb-pay-btn" onclick="processPayment('Net Banking')">
+          🔒 Pay <span id="nb-pay-amt">—</span> via Net Banking
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══ SUCCESS OVERLAY ══ -->
+<div class="success-overlay" id="success-overlay">
+  <div class="success-ring">✓</div>
+  <h2>Payment Successful!</h2>
+  <p>Your appointment has been confirmed. A confirmation will be sent to your registered contact.</p>
+  <div class="receipt" id="receipt-detail"></div>
+  <button class="home-btn" onclick="window.location.href='/chat'">Back to MedBot Chat</button>
+</div>
+
+<!-- ══ EMERGENCY WIDGET ══ -->
+<style>
+.emer-fab{position:fixed;bottom:28px;right:28px;z-index:500;width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,#E53935,#B71C1C);border:none;cursor:pointer;box-shadow:0 6px 22px rgba(229,57,53,.5);display:flex;align-items:center;justify-content:center;font-size:24px;animation:emerPulse 2s infinite;transition:.18s}
+.emer-fab:hover{transform:scale(1.1);box-shadow:0 10px 32px rgba(229,57,53,.65)}
+@keyframes emerPulse{0%,100%{box-shadow:0 6px 22px rgba(229,57,53,.5),0 0 0 0 rgba(229,57,53,.4)}70%{box-shadow:0 6px 22px rgba(229,57,53,.5),0 0 0 14px rgba(229,57,53,0)}}
+.emer-overlay{position:fixed;inset:0;background:rgba(10,10,30,.6);z-index:600;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(5px);opacity:0;pointer-events:none;transition:.2s}
+.emer-overlay.open{opacity:1;pointer-events:all}
+.emer-modal{background:#fff;border-radius:20px;width:100%;max-width:420px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.25);transform:scale(.95);transition:.22s}
+.emer-overlay.open .emer-modal{transform:scale(1)}
+.emer-head{background:linear-gradient(135deg,#E53935,#B71C1C);padding:22px 24px;display:flex;align-items:center;gap:12px}
+.emer-head-icon{font-size:36px}
+.emer-head h2{font-size:18px;font-weight:800;color:#fff}
+.emer-head p{font-size:12px;color:rgba(255,255,255,.75);margin-top:2px}
+.emer-close{margin-left:auto;background:rgba(255,255,255,.2);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center}
+.emer-body{padding:18px 20px}
+.emer-card{display:flex;align-items:center;gap:14px;padding:13px 16px;border-radius:12px;margin-bottom:10px;border:1.5px solid #f0f0f0;transition:.16s;text-decoration:none}
+.emer-card:hover{border-color:#E53935;background:#FFF5F5;transform:translateX(3px)}
+.emer-card:last-child{margin-bottom:0}
+.emer-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.emer-info{flex:1}
+.emer-num{font-size:18px;font-weight:800;color:#E53935;letter-spacing:.5px}
+.emer-desc{font-size:12px;color:#607D8B;margin-top:1px;font-weight:500}
+.call-chip{padding:6px 14px;background:#E53935;color:#fff;border-radius:20px;font-size:12.5px;font-weight:700;flex-shrink:0}
+</style>
+<button class="emer-fab" onclick="document.getElementById('emer-overlay').classList.add('open')" title="Emergency Contacts">🚨</button>
+<div class="emer-overlay" id="emer-overlay" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="emer-modal">
+    <div class="emer-head">
+      <div class="emer-head-icon">🚨</div>
+      <div><h2>Emergency Contacts</h2><p>24/7 — Call immediately in case of emergency</p></div>
+      <button class="emer-close" onclick="document.getElementById('emer-overlay').classList.remove('open')">✕</button>
+    </div>
+    <div class="emer-body">
+      <a class="emer-card" href="tel:112"><div class="emer-icon" style="background:#FFEBEE">🆘</div><div class="emer-info"><div class="emer-num">112</div><div class="emer-desc">National Emergency Helpline</div></div><div class="call-chip">Call</div></a>
+      <a class="emer-card" href="tel:108"><div class="emer-icon" style="background:#FFF3E0">🚑</div><div class="emer-info"><div class="emer-num">108</div><div class="emer-desc">Ambulance Service</div></div><div class="call-chip">Call</div></a>
+      <a class="emer-card" href="tel:102"><div class="emer-icon" style="background:#E8F5E9">🩺</div><div class="emer-info"><div class="emer-num">102</div><div class="emer-desc">National Ambulance (Pregnant Women &amp; Children)</div></div><div class="call-chip">Call</div></a>
+      <a class="emer-card" href="tel:104"><div class="emer-icon" style="background:#E3F2FD">💊</div><div class="emer-info"><div class="emer-num">104</div><div class="emer-desc">Medical Helpline</div></div><div class="call-chip">Call</div></a>
+      <a class="emer-card" href="tel:18001804132"><div class="emer-icon" style="background:#F3E5F5">🧠</div><div class="emer-info"><div class="emer-num">1800-180-4132</div><div class="emer-desc">Mental Health Helpline (iCall)</div></div><div class="call-chip">Call</div></a>
+      <a class="emer-card" href="tel:1098"><div class="emer-icon" style="background:#E0F7FA">👶</div><div class="emer-info"><div class="emer-num">1098</div><div class="emer-desc">Child Helpline (CHILDLINE)</div></div><div class="call-chip">Call</div></a>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── Load summary from URL params ── */
+const p = new URLSearchParams(location.search);
+const fee      = parseInt(p.get('fee') || '0');
+const gst      = Math.round(fee * 0.18);
+const total    = fee + gst;
+const doctor   = p.get('doctor') || 'Doctor';
+const spec     = p.get('spec') || '';
+const dateStr  = p.get('date') || '';
+const timeStr  = p.get('time') || '';
+const patient  = p.get('patient') || 'Patient';
+
+function initials(name) {
+  return name.replace('Dr. ', '').split(' ').slice(0,2).map(w=>w[0]).join('');
+}
+function fmtDate(d) {
+  if (!d) return '—';
+  try { return new Date(d+'T00:00:00').toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'}); } catch { return d; }
+}
+
+document.getElementById('sum-avatar').textContent = initials(doctor);
+document.getElementById('sum-doctor').textContent = doctor;
+document.getElementById('sum-spec').textContent   = spec;
+document.getElementById('sum-patient').textContent = patient;
+document.getElementById('sum-date').textContent   = fmtDate(dateStr);
+document.getElementById('sum-time').textContent   = timeStr || '—';
+document.getElementById('sum-fee').textContent    = '₹' + fee;
+document.getElementById('sum-gst').textContent    = '₹' + gst;
+document.getElementById('sum-total').textContent  = '₹' + total;
+
+['upi-pay-amt','card-pay-amt','nb-pay-amt'].forEach(id => {
+  document.getElementById(id).textContent = '₹' + total;
+});
+
+// Update QR code with actual amount
+const qrData = encodeURIComponent(`upi://pay?pa=8595182655@slc&pn=Chhavi+Sharma&am=${total}&cu=INR&tn=MedBot+Appointment`);
+document.getElementById('qr-img').src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=10&data=${qrData}`;
+
+/* ── QR countdown ── */
+let countdown = 599;
+const timerEl = document.getElementById('qr-timer');
+const qrInterval = setInterval(() => {
+  countdown--;
+  if (countdown <= 0) { clearInterval(qrInterval); timerEl.textContent = '⏱ QR Expired'; return; }
+  const m = Math.floor(countdown / 60), s = countdown % 60;
+  timerEl.textContent = `⏱ Expires in ${m}:${s.toString().padStart(2,'0')}`;
+}, 1000);
+
+/* ── Method switching ── */
+function switchMethod(method, tab) {
+  document.querySelectorAll('.m-tab').forEach(t => t.classList.remove('active'));
+  tab.classList.add('active');
+  document.querySelectorAll('.upi-panel,.card-panel,.nb-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(`panel-${method}`).classList.add('active');
+}
+
+/* ── UPI ── */
+const MERCHANT_UPI  = '8595182655@slc';
+const MERCHANT_NAME = 'Chhavi Sharma';
+
+function copyUPI() {
+  navigator.clipboard.writeText(MERCHANT_UPI).catch(() => {
+    const el = document.createElement('textarea');
+    el.value = MERCHANT_UPI; document.body.appendChild(el); el.select();
+    document.execCommand('copy'); document.body.removeChild(el);
+  });
+  const btn = document.querySelector('[onclick="copyUPI()"]');
+  if (!btn) return;
+  const orig = btn.textContent;
+  btn.textContent = 'Copied!'; btn.style.background='#E8F5E9'; btn.style.color='#2E7D32';
+  setTimeout(() => { btn.textContent = orig; btn.style.background='#fff'; btn.style.color='#1565C0'; }, 2000);
+}
+
+let selectedUPIApp = null;
+function selectUPIApp(el, app) {
+  selectedUPIApp = app;
+  document.querySelectorAll('.upi-app').forEach(a => a.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function verifyUPI() {
+  const id = document.getElementById('upi-id').value.trim();
+  if (!id) {
+    document.getElementById('upi-id').value = MERCHANT_UPI;
+    return;
+  }
+  if (!id.includes('@')) return alert('Please enter a valid UPI ID (e.g. name@upi).');
+  const btn = document.querySelector('.verify-btn');
+  const orig = btn.textContent;
+  btn.textContent = 'Verified!'; btn.style.background='#E8F5E9'; btn.style.color='#2E7D32';
+  setTimeout(() => { btn.textContent = orig; btn.style.background=''; btn.style.color=''; }, 2000);
+}
+
+/* ── Card formatting ── */
+function formatCard(el) {
+  let v = el.value.replace(/\D/g,'').slice(0,16);
+  el.value = v.match(/.{1,4}/g)?.join(' ') || v;
+  const disp = v.padEnd(16,'•').match(/.{1,4}/g).join(' ');
+  document.getElementById('card-num-disp').textContent = disp;
+  // Detect card brand
+  const brand = v.startsWith('4') ? 'VISA' : v.startsWith('5') ? 'MASTERCARD' : v.startsWith('6') ? 'RUPAY' : 'CARD';
+  document.getElementById('card-brand-disp').textContent = brand;
+}
+
+function formatExpiry(el) {
+  let v = el.value.replace(/\D/g,'');
+  if (v.length >= 2) v = v.slice(0,2) + '/' + v.slice(2,4);
+  el.value = v;
+  document.getElementById('card-exp-disp').textContent = v || 'MM/YY';
+}
+
+/* ── Net Banking ── */
+let selectedBank = null;
+function selectBank(el, bank) {
+  selectedBank = bank;
+  document.querySelectorAll('.bank-item').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+/* ── Pay ── */
+async function processPayment(method) {
+  if (method === 'UPI' && !selectedUPIApp && !document.getElementById('upi-id').value.trim()) {
+    return alert('Please select a UPI app or enter your UPI ID.');
+  }
+  if (method === 'Card') {
+    const num  = document.getElementById('cc-num').value.replace(/\s/g,'');
+    const name = document.getElementById('cc-name').value.trim();
+    const exp  = document.getElementById('cc-exp').value;
+    const cvv  = document.getElementById('cc-cvv').value;
+    if (num.length < 16) return alert('Please enter a valid 16-digit card number.');
+    if (!name)           return alert('Please enter the name on card.');
+    if (exp.length < 5)  return alert('Please enter a valid expiry date (MM/YY).');
+    if (cvv.length < 3)  return alert('Please enter a valid 3-digit CVV.');
+  }
+  if (method === 'Net Banking' && !selectedBank) {
+    return alert('Please select your bank.');
+  }
+
+  const btnId = method === 'UPI' ? 'upi-pay-btn' : method === 'Card' ? 'card-pay-btn' : 'nb-pay-btn';
+  const btn = document.getElementById(btnId);
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Processing…';
+
+  await new Promise(r => setTimeout(r, 2200));
+
+  // Show success
+  const txnId = 'MED' + Date.now().toString().slice(-8).toUpperCase();
+  document.getElementById('receipt-detail').innerHTML = `
+    <div class="receipt-row"><span class="receipt-lbl">Transaction ID</span><span>${txnId}</span></div>
+    <div class="receipt-row"><span class="receipt-lbl">Doctor</span><span>${doctor}</span></div>
+    <div class="receipt-row"><span class="receipt-lbl">Date &amp; Time</span><span>${fmtDate(dateStr)}, ${timeStr}</span></div>
+    <div class="receipt-row"><span class="receipt-lbl">Payment Method</span><span>${method}</span></div>
+    <div class="receipt-row"><span class="receipt-lbl">Amount Paid</span><span>₹${total}</span></div>
+  `;
+  document.getElementById('success-overlay').classList.add('show');
+  clearInterval(qrInterval);
+}
+
+document.addEventListener('keydown', e => {
+  if(e.key==='Escape') document.getElementById('emer-overlay')?.classList.remove('open');
+});
+</script>
+</body>
+</html>

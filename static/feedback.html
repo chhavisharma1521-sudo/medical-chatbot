@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Patient Feedback — MediCare</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0d2b6b 0%,#1565C0 60%,#42a5f5 100%);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:40px 16px}
+  .logo{color:#fff;font-size:22px;font-weight:800;margin-bottom:8px;letter-spacing:-.5px}
+  .logo span{color:#90caf9}
+  .sub{color:rgba(255,255,255,.7);font-size:13px;margin-bottom:32px}
+  .card{background:#fff;border-radius:20px;padding:36px;width:100%;max-width:520px;box-shadow:0 24px 64px rgba(0,0,0,.25)}
+  h2{font-size:20px;font-weight:800;color:#0d2b6b;margin-bottom:4px}
+  .card-sub{font-size:13px;color:#64748b;margin-bottom:28px}
+  .field{margin-bottom:18px}
+  label{display:block;font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
+  input,select,textarea{width:100%;padding:11px 14px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;font-family:inherit;transition:.15s;color:#1e293b;background:#fff}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:#1565C0;box-shadow:0 0 0 3px rgba(21,101,192,.1)}
+  textarea{resize:vertical;min-height:100px}
+
+  /* Star rating */
+  .stars{display:flex;gap:8px;flex-direction:row-reverse;justify-content:flex-end}
+  .stars input{display:none}
+  .stars label{font-size:36px;cursor:pointer;color:#e2e8f0;transition:.15s;padding:0;width:auto;background:none;border:none}
+  .stars input:checked ~ label,
+  .stars label:hover,
+  .stars label:hover ~ label{color:#f59e0b}
+
+  .rating-desc{font-size:12px;color:#64748b;margin-top:6px;height:16px}
+
+  .submit-btn{width:100%;padding:14px;background:linear-gradient(135deg,#0d2b6b,#1565C0);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;transition:.2s;margin-top:8px}
+  .submit-btn:hover{opacity:.9;transform:translateY(-1px)}
+  .submit-btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+
+  .success{display:none;text-align:center;padding:20px 0}
+  .success .tick{font-size:56px;margin-bottom:12px}
+  .success h3{color:#0d2b6b;font-size:20px;margin-bottom:8px}
+  .success p{color:#64748b;font-size:14px;line-height:1.6}
+  .submit-another{margin-top:20px;padding:10px 24px;border:1.5px solid #1565C0;color:#1565C0;background:#fff;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer}
+
+  /* Public wall */
+  .wall-section{width:100%;max-width:520px;margin-top:32px}
+  .wall-title{color:#fff;font-size:15px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+  .review-card{background:rgba(255,255,255,.12);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.2);border-radius:14px;padding:18px;margin-bottom:12px;color:#fff}
+  .review-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .review-name{font-weight:700;font-size:14px}
+  .review-stars{color:#f59e0b;font-size:16px}
+  .review-comment{font-size:13px;line-height:1.5;color:rgba(255,255,255,.85)}
+  .review-meta{font-size:11px;color:rgba(255,255,255,.5);margin-top:8px}
+</style>
+</head>
+<body>
+
+<div class="logo">Medi<span>Care</span></div>
+<div class="sub">Share your experience to help us improve</div>
+
+<div class="card">
+  <h2>⭐ Leave Feedback</h2>
+  <p class="card-sub">Your honest review helps us provide better care</p>
+
+  <div id="form-area">
+    <div class="field">
+      <label>Your Name</label>
+      <input id="fb-name" placeholder="Enter your full name"/>
+    </div>
+
+    <div class="field">
+      <label>Doctor (optional)</label>
+      <select id="fb-doctor">
+        <option value="">— Select doctor —</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Category</label>
+      <select id="fb-category">
+        <option value="general">General Experience</option>
+        <option value="doctor">Doctor Quality</option>
+        <option value="staff">Staff & Service</option>
+        <option value="facility">Facility & Cleanliness</option>
+        <option value="waiting">Waiting Time</option>
+        <option value="online">Online Consultation</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Your Rating</label>
+      <div class="stars">
+        <input type="radio" id="s5" name="rating" value="5"/><label for="s5" title="Excellent">★</label>
+        <input type="radio" id="s4" name="rating" value="4"/><label for="s4" title="Good">★</label>
+        <input type="radio" id="s3" name="rating" value="3"/><label for="s3" title="Average">★</label>
+        <input type="radio" id="s2" name="rating" value="2"/><label for="s2" title="Poor">★</label>
+        <input type="radio" id="s1" name="rating" value="1"/><label for="s1" title="Terrible">★</label>
+      </div>
+      <div class="rating-desc" id="rating-desc"></div>
+    </div>
+
+    <div class="field">
+      <label>Your Comments</label>
+      <textarea id="fb-comment" placeholder="Tell us about your experience — what went well, what could be improved…"></textarea>
+    </div>
+
+    <button class="submit-btn" id="fb-btn" onclick="submitFeedback()">Submit Feedback</button>
+  </div>
+
+  <div class="success" id="success-area">
+    <div class="tick">🎉</div>
+    <h3>Thank you for your feedback!</h3>
+    <p>Your review has been submitted and will help us improve our services for all patients.</p>
+    <button class="submit-another" onclick="resetForm()">Leave Another Review</button>
+  </div>
+</div>
+
+<!-- Public feedback wall -->
+<div class="wall-section">
+  <div class="wall-title">💬 What Patients Are Saying</div>
+  <div id="public-wall"></div>
+</div>
+
+<script>
+const RATING_LABELS = {1:'Terrible 😞',2:'Poor 😕',3:'Average 😐',4:'Good 😊',5:'Excellent 🌟'};
+
+// Load doctors
+fetch('/api/doctors').then(r=>r.json()).then(docs=>{
+  const sel = document.getElementById('fb-doctor');
+  docs.forEach(d=>{ const o=document.createElement('option'); o.value=d.name; o.textContent=d.name+' — '+d.specialization; sel.appendChild(o); });
+}).catch(()=>{});
+
+// Star rating feedback
+document.querySelectorAll('.stars input').forEach(inp=>{
+  inp.addEventListener('change',()=>{
+    document.getElementById('rating-desc').textContent = RATING_LABELS[inp.value]||'';
+  });
+});
+
+async function submitFeedback(){
+  const name    = document.getElementById('fb-name').value.trim();
+  const rated   = document.querySelector('.stars input:checked');
+  const comment = document.getElementById('fb-comment').value.trim();
+  if(!name)  return alert('Please enter your name');
+  if(!rated) return alert('Please select a star rating');
+  const btn = document.getElementById('fb-btn');
+  btn.disabled=true; btn.textContent='Submitting…';
+  const res = await fetch('/api/feedback',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      patient_name: name,
+      rating:       parseInt(rated.value),
+      comment,
+      doctor_name:  document.getElementById('fb-doctor').value,
+      category:     document.getElementById('fb-category').value,
+    }),
+  });
+  btn.disabled=false; btn.textContent='Submit Feedback';
+  if(res.ok){
+    document.getElementById('form-area').style.display='none';
+    document.getElementById('success-area').style.display='block';
+    loadPublicWall();
+  } else { alert('Submission failed. Please try again.'); }
+}
+
+function resetForm(){
+  document.getElementById('fb-name').value='';
+  document.getElementById('fb-comment').value='';
+  document.querySelectorAll('.stars input').forEach(i=>i.checked=false);
+  document.getElementById('rating-desc').textContent='';
+  document.getElementById('fb-doctor').selectedIndex=0;
+  document.getElementById('fb-category').selectedIndex=0;
+  document.getElementById('form-area').style.display='block';
+  document.getElementById('success-area').style.display='none';
+}
+
+async function loadPublicWall(){
+  const res = await fetch('/api/feedback/public').catch(()=>null);
+  if(!res||!res.ok) return;
+  const items = await res.json();
+  const wall = document.getElementById('public-wall');
+  if(!items.length){ wall.innerHTML='<div style="color:rgba(255,255,255,.5);text-align:center;padding:20px;font-size:13px">No public reviews yet. Be the first!</div>'; return; }
+  wall.innerHTML = items.map(f=>`
+    <div class="review-card">
+      <div class="review-top">
+        <div class="review-name">${esc(f.patient_name)}</div>
+        <div class="review-stars">${'★'.repeat(f.rating)}${'☆'.repeat(5-f.rating)}</div>
+      </div>
+      ${f.comment?`<div class="review-comment">${esc(f.comment)}</div>`:''}
+      <div class="review-meta">${f.doctor_name?'Dr. '+esc(f.doctor_name)+' · ':''}${f.category} · ${f.created_at?.slice(0,10)||''}</div>
+    </div>`).join('');
+}
+
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+loadPublicWall();
+</script>
+</body>
+</html>
