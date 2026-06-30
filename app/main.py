@@ -400,7 +400,7 @@ async def appt_payment(appt_id: int, req: PaymentUpdate, _=Depends(require_auth)
 
 @app.get("/login")
 async def login_page():
-    return FileResponse(str(STATIC_DIR / "intake.html"))
+    return FileResponse(str(STATIC_DIR / "login.html"))
 
 
 @app.get("/admin")
