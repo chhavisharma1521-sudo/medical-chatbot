@@ -328,6 +328,11 @@ async def patient_info_page():
     return FileResponse(str(STATIC_DIR / "patient-info.html"))
 
 
+@app.get("/intake")
+async def intake_page():
+    return FileResponse(str(STATIC_DIR / "intake.html"))
+
+
 @app.get("/appointments")
 async def appointments_page():
     return FileResponse(str(STATIC_DIR / "appointments.html"))
