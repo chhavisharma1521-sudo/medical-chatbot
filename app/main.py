@@ -318,6 +318,24 @@ async def health():
     return {"status": "ok"}
 
 
+@app.get("/admin/knowledge-base/stats")
+async def knowledge_base_stats(_=Depends(require_auth)):
+    """Vector DB / chatbot knowledge stats — how much data the chatbot can use."""
+    from app.rag import kb_stats
+    stats = kb_stats()
+    # add upload count from analytics
+    upload_count = 0
+    if DB_PATH.exists():
+        con = sqlite3.connect(str(DB_PATH))
+        try:
+            upload_count = con.execute("SELECT COUNT(*) FROM upload_logs").fetchone()[0]
+        except Exception:
+            pass
+        con.close()
+    stats["uploaded_files"] = upload_count
+    return stats
+
+
 @app.get("/payment")
 async def payment_page():
     return FileResponse(str(STATIC_DIR / "payment.html"))

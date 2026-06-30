@@ -51,6 +51,44 @@ def _get_model():
     return _model
 
 
+def kb_stats() -> dict:
+    """Return knowledge-base / vector DB statistics for the admin panel."""
+    try:
+        collection = _get_collection()
+        total = collection.count()
+
+        # Sample a batch of metadata to find distinct source documents
+        sources = {}
+        try:
+            sample = collection.get(include=["metadatas"], limit=10000)
+            for md in (sample.get("metadatas") or []):
+                if not md:
+                    continue
+                src = md.get("source") or md.get("filename") or md.get("file") or "unknown"
+                sources[src] = sources.get(src, 0) + 1
+        except Exception:
+            pass
+
+        return {
+            "available": True,
+            "collection": COLLECTION_NAME,
+            "embed_model": EMBED_MODEL,
+            "total_chunks": total,
+            "total_sources": len(sources),
+            "sources": [{"name": k, "chunks": v} for k, v in sorted(sources.items(), key=lambda x: -x[1])],
+        }
+    except Exception as e:
+        return {
+            "available": False,
+            "collection": COLLECTION_NAME,
+            "embed_model": EMBED_MODEL,
+            "total_chunks": 0,
+            "total_sources": 0,
+            "sources": [],
+            "error": str(e),
+        }
+
+
 def answer(question: str, history: list[dict]) -> str:
     embedder = _get_embedder()
     collection = _get_collection()

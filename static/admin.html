@@ -583,6 +583,9 @@
       <button class="nav-item" onclick="gotoPanel('audit')">
         <span class="nav-icon">🔍</span> Audit Log
       </button>
+      <button class="nav-item" onclick="gotoPanel('knowledge')">
+        <span class="nav-icon">🧠</span> Knowledge Base
+      </button>
     </nav>
 
     <div class="sidebar-footer">
@@ -1361,6 +1364,28 @@
         <div id="al-body"></div>
       </div><!-- /panel-audit -->
 
+      <!-- ══ KNOWLEDGE BASE ══ -->
+      <div class="panel" id="panel-knowledge">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div style="font-size:13px;color:var(--muted)">Ye data chatbot apne jawab dene ke liye use karta hai (Vector Database)</div>
+          <button class="form-save-btn" onclick="loadKnowledgeBase()">↻ Refresh</button>
+        </div>
+        <div class="stats-grid" style="margin-bottom:20px">
+          <div class="stat-card"><div class="stat-icon">🧠</div><div class="stat-value" id="kb-chunks">—</div><div class="stat-label">Knowledge Points (Chunks)</div></div>
+          <div class="stat-card"><div class="stat-icon" style="color:#1565C0">📄</div><div class="stat-value" id="kb-sources">—</div><div class="stat-label">Source Documents</div></div>
+          <div class="stat-card"><div class="stat-icon" style="color:#43A047">📁</div><div class="stat-value" id="kb-uploads">—</div><div class="stat-label">Files Uploaded</div></div>
+          <div class="stat-card"><div class="stat-icon" style="color:#9C27B0">⚙️</div><div class="stat-value" id="kb-status" style="font-size:15px">—</div><div class="stat-label">Status</div></div>
+        </div>
+        <div class="gen-card" style="padding:20px;margin-bottom:18px">
+          <div style="font-size:12px;color:var(--muted)">Embedding Model</div>
+          <div id="kb-model" style="font-size:15px;font-weight:700;color:var(--text);margin-top:4px">—</div>
+        </div>
+        <div class="section-card">
+          <div class="section-header"><h3>Source Documents in Knowledge Base</h3><span class="section-count" id="kb-src-count">—</span></div>
+          <div id="kb-body"></div>
+        </div>
+      </div><!-- /panel-knowledge -->
+
     </div><!-- /content -->
   </div><!-- /main -->
 </div><!-- /app -->
@@ -1463,6 +1488,7 @@ const PANEL_META = {
   risk:          { title: '⚠️ Patient Risk Scores', sub: 'AI-powered patient risk assessment based on health and visit data' },
   weekly:        { title: '📊 Weekly AI Report',    sub: 'Auto-generated clinic performance summary for the past 7 days' },
   audit:         { title: '🔍 Audit Log',           sub: 'Track every admin action — who did what and when' },
+  knowledge:     { title: '🧠 Knowledge Base',      sub: 'Vector database — how much medical data the chatbot can use' },
 };
 
 function gotoPanel(name) {
@@ -1489,6 +1515,7 @@ function gotoPanel(name) {
   if(name === 'risk')      loadRiskScores();
   if(name === 'weekly')    loadWeeklyReport();
   if(name === 'audit')     loadAuditLog();
+  if(name === 'knowledge') loadKnowledgeBase();
 }
 
 /* ── Render ── */
@@ -3559,6 +3586,40 @@ async function loadAuditLog() {
         <td style="font-size:12px;color:var(--muted)">${esc(l.details||'—')}</td>
       </tr>`;
     }).join('')}</tbody>
+  </table></div>`;
+}
+
+/* ══════════════════════════════════════════
+   KNOWLEDGE BASE (Vector DB stats)
+══════════════════════════════════════════ */
+async function loadKnowledgeBase() {
+  document.getElementById('kb-body').innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted)">Loading…</div>';
+  const s = await fetch('/admin/knowledge-base/stats',{headers:authHeaders()}).then(r=>r.ok?r.json():null).catch(()=>null);
+  if(!s){ document.getElementById('kb-body').innerHTML='<div style="color:#E53935;text-align:center;padding:30px">Failed to load knowledge base stats</div>'; return; }
+
+  document.getElementById('kb-chunks').textContent  = (s.total_chunks||0).toLocaleString();
+  document.getElementById('kb-sources').textContent = s.total_sources||0;
+  document.getElementById('kb-uploads').textContent = s.uploaded_files||0;
+  document.getElementById('kb-model').textContent   = s.embed_model||'—';
+
+  const statusEl = document.getElementById('kb-status');
+  if(s.available){ statusEl.textContent = '🟢 Active'; statusEl.style.color = '#43A047'; }
+  else { statusEl.textContent = '🔴 Offline'; statusEl.style.color = '#E53935'; }
+
+  document.getElementById('kb-src-count').textContent = (s.sources||[]).length + ' documents';
+  const body = document.getElementById('kb-body');
+  if(!(s.sources||[]).length){
+    body.innerHTML = '<div style="color:var(--muted);text-align:center;padding:30px">'
+      + (s.available ? 'Knowledge base has ' + (s.total_chunks||0) + ' chunks (source names not available).' : 'Vector database not reachable.')
+      + '</div>';
+    return;
+  }
+  body.innerHTML = `<div class="tbl-wrap"><table class="data-table">
+    <thead><tr><th>Document</th><th>Knowledge Points (Chunks)</th></tr></thead>
+    <tbody>${s.sources.map(src=>`<tr>
+      <td><strong>📄 ${esc(src.name)}</strong></td>
+      <td><span style="background:#1565C022;color:#1565C0;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700">${src.chunks}</span></td>
+    </tr>`).join('')}</tbody>
   </table></div>`;
 }
 
