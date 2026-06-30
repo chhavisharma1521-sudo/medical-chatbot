@@ -1636,6 +1636,41 @@ async def portal_data(patient=Depends(require_patient)):
     return get_patient_data(patient["name"])
 
 
+@app.get("/portal/profile")
+async def portal_get_profile(patient=Depends(require_patient)):
+    """Patient's full profile from patients.db (or basics from their account)."""
+    rec = get_patient_by_email(patient["email"]) or {}
+    rec.setdefault("name", patient.get("name", ""))
+    rec.setdefault("email", patient.get("email", ""))
+    return rec
+
+
+class PortalProfileRequest(BaseModel):
+    name: str = ""
+    age: str = ""
+    gender: str = ""
+    phone: str = ""
+    blood_group: str = ""
+    height: str = ""
+    weight: str = ""
+    medical_conditions: str = ""
+    medications: str = ""
+    allergies: str = ""
+    emergency_contact: str = ""
+    symptoms: str = ""
+
+
+@app.post("/portal/profile")
+async def portal_save_profile(req: PortalProfileRequest, patient=Depends(require_patient)):
+    """Patient updates their own full profile — saved to patients.db so admin sees full details."""
+    data = req.dict()
+    data["email"] = patient["email"]          # force their own email (security)
+    if not data.get("name"):
+        data["name"] = patient["name"]
+    pid = save_patient(data)
+    return {"message": "Profile saved", "id": pid}
+
+
 @app.post("/portal/lab-reports/upload")
 async def portal_upload_lab(
     report_type: str = "General",

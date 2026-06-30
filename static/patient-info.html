@@ -393,7 +393,8 @@ const KNOWN_CONDITIONS = ['Diabetes','Hypertension','Asthma','Heart Disease'];
 
 let patient = null;
 try { patient = JSON.parse(localStorage.getItem('medbot_patient') || 'null'); } catch {}
-if (!patient) { window.location.href = '/intake'; }
+const portalToken = localStorage.getItem('portal_token');
+if (!patient && !portalToken) { window.location.href = '/intake'; }
 
 function display(id, val, fallback='Not provided'){
   const el = document.getElementById(id);
@@ -549,11 +550,20 @@ async function saveProfile(){
   patient = updated;
 
   try {
-    await fetch('/patient/register', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify(updated),
-    });
+    if (portalToken) {
+      // Save to the patient's authenticated profile → shows full details in admin
+      await fetch('/portal/profile', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json', Authorization: `Bearer ${portalToken}`},
+        body: JSON.stringify(updated),
+      });
+    } else {
+      await fetch('/patient/register', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(updated),
+      });
+    }
   } catch {}
 
   loadProfile();
@@ -564,7 +574,22 @@ async function saveProfile(){
   setTimeout(() => t.classList.remove('show'), 3000);
 }
 
-loadProfile();
+async function initProfile(){
+  // If logged into the portal, load the real profile from the server (works on any device)
+  if (portalToken) {
+    try {
+      const res = await fetch('/portal/profile', { headers: { Authorization: `Bearer ${portalToken}` } });
+      if (res.ok) {
+        const server = await res.json();
+        patient = { ...(patient || {}), ...server };
+        localStorage.setItem('medbot_patient', JSON.stringify(patient));
+      }
+    } catch {}
+  }
+  if (!patient) { window.location.href = '/intake'; return; }
+  loadProfile();
+}
+initProfile();
 </script>
 </body>
 </html>

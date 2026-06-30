@@ -31,8 +31,39 @@ def init_patients_db():
     con.close()
 
 
+_FIELDS = ["age", "gender", "phone", "blood_group", "height", "weight",
+           "medical_conditions", "medications", "allergies", "emergency_contact", "symptoms"]
+
+
 def save_patient(data: dict) -> int:
+    """Upsert by email: if a patient with this email exists, UPDATE it (only non-empty fields);
+    otherwise INSERT a new record. This lets a patient fill/edit their profile without creating duplicates."""
     con = sqlite3.connect(str(DB_PATH))
+    con.row_factory = sqlite3.Row
+    email = (data.get("email") or "").strip()
+
+    existing = None
+    if email:
+        existing = con.execute(
+            "SELECT * FROM patients WHERE email=? COLLATE NOCASE", (email,)
+        ).fetchone()
+
+    if existing:
+        # Update only fields that are provided (non-empty), keep the rest
+        updates, params = [], []
+        if data.get("name"):
+            updates.append("name=?"); params.append(data["name"])
+        for f in _FIELDS:
+            if data.get(f) not in (None, ""):
+                updates.append(f"{f}=?"); params.append(data[f])
+        pid = existing["id"]
+        if updates:
+            params.append(pid)
+            con.execute(f"UPDATE patients SET {', '.join(updates)} WHERE id=?", params)
+            con.commit()
+        con.close()
+        return pid
+
     cur = con.execute(
         """INSERT INTO patients
            (name,age,gender,phone,email,blood_group,height,weight,
