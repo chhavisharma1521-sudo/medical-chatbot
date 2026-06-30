@@ -91,6 +91,14 @@ def verify_patient_token(token: str):
     return dict(row) if row else None
 
 
+def list_patient_accounts() -> list[dict]:
+    """All portal login accounts (for admin visibility)."""
+    con = _con()
+    rows = con.execute("SELECT name, email, phone, created_at FROM patient_accounts ORDER BY created_at DESC").fetchall()
+    con.close()
+    return [dict(r) for r in rows]
+
+
 def get_patient_data(patient_name: str) -> dict:
     """Aggregate all data for a patient across all DBs."""
     from app.appointments import list_appointments

@@ -92,7 +92,7 @@ from app.pharmacy import (
 )
 from app.patient_portal import (
     init_patient_portal_db, register_patient, login_patient,
-    verify_patient_token, get_patient_data,
+    verify_patient_token, get_patient_data, list_patient_accounts,
 )
 from app.ai_tools import compute_patient_risk, generate_weekly_report
 
@@ -604,7 +604,21 @@ async def patient_register(data: dict):
 
 @app.get("/admin/patients")
 async def admin_patients(_=Depends(require_auth)):
-    return list_patients()
+    patients = list_patients()
+    existing_emails = {(p.get("email") or "").lower() for p in patients if p.get("email")}
+    # Merge in portal accounts that aren't already in the patients table
+    for acc in list_patient_accounts():
+        email = (acc.get("email") or "").lower()
+        if email and email in existing_emails:
+            continue
+        patients.append({
+            "name": acc.get("name", ""),
+            "email": acc.get("email", ""),
+            "phone": acc.get("phone", ""),
+            "registered_at": acc.get("created_at", ""),
+            "source": "portal",
+        })
+    return patients
 
 
 @app.get("/consultation")
