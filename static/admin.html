@@ -1380,13 +1380,13 @@ const adminName = localStorage.getItem('admin_name') || 'Admin';
   loadAll();
 })();
 
-function redirect() { window.location.href = '/login'; }
+function redirect() { window.location.href = '/admin-login'; }
 function authHeaders() { return { Authorization: `Bearer ${token}` }; }
 
 function logout() {
   localStorage.removeItem('admin_token');
   localStorage.removeItem('admin_name');
-  window.location.href = '/login';
+  window.location.href = '/admin-login';
 }
 
 /* ── Data store ── */

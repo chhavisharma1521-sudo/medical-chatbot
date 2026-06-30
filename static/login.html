@@ -388,6 +388,31 @@ async function doReset() {
   }
 })();
 
+// First-admin setup: if no admin exists yet, prompt to create one.
+// Once an admin exists, hide the Sign Up tab (registration closed).
+(async function checkSetup() {
+  try {
+    const res = await fetch('/auth/setup-status');
+    const data = await res.json();
+    const signupTab = document.getElementById('tab-signup');
+    const subtitle  = document.querySelector('.card-header p');
+    if (data.admin_exists) {
+      // Admin already created — lock signup
+      signupTab.style.display = 'none';
+      // make login tab full width
+      document.getElementById('tab-login').style.flex = '1';
+      // remove the "Sign up here" footer link on login form
+      const loginFooter = document.querySelector('#login-form .footer-note');
+      if (loginFooter) loginFooter.style.display = 'none';
+    } else {
+      // No admin yet — guide them to create the first account
+      if (subtitle) subtitle.textContent = 'First-time setup — create your admin account';
+      signupTab.textContent = 'Create Admin Account';
+      switchTab('signup');
+    }
+  } catch { /* if it fails, leave defaults */ }
+})();
+
 // Redirect to admin if already logged in
 </script>
 </body>

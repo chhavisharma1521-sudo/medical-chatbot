@@ -20,7 +20,7 @@ from app.powerbi import push_to_powerbi
 from app.forgot_password import init_reset_table, create_reset_token, verify_and_reset_password, send_reset_email
 from app.auth import (
     init_admin_db, register_user, login_user, get_user_by_id, list_users,
-    delete_user, decode_token,
+    delete_user, decode_token, count_admins,
 )
 from app.patients import init_patients_db, save_patient, list_patients
 from app.appointments import (
@@ -238,7 +238,7 @@ class ChatResponse(BaseModel):
 
 @app.get("/")
 async def root():
-    return FileResponse(str(STATIC_DIR / "login.html"))
+    return FileResponse(str(STATIC_DIR / "chat.html"))
 
 
 @app.get("/chat")
@@ -408,6 +408,11 @@ async def login_page():
     return FileResponse(str(STATIC_DIR / "login.html"))
 
 
+@app.get("/admin-login")
+async def admin_login_page():
+    return FileResponse(str(STATIC_DIR / "login.html"))
+
+
 @app.get("/admin")
 async def admin_page():
     return FileResponse(str(STATIC_DIR / "admin.html"))
@@ -427,8 +432,20 @@ class LoginRequest(BaseModel):
     password: str
 
 
+@app.get("/auth/setup-status")
+async def setup_status():
+    """Tells the login page whether an admin already exists (signup should be locked)."""
+    return {"admin_exists": count_admins() > 0}
+
+
 @app.post("/auth/register")
 async def auth_register(req: RegisterRequest):
+    # First-admin pattern: once one admin exists, public signup is closed.
+    if count_admins() > 0:
+        raise HTTPException(
+            status_code=403,
+            detail="Admin registration is closed. Please contact the administrator.",
+        )
     try:
         result = register_user(
             name=req.name,

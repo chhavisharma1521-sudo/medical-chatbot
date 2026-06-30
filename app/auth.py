@@ -123,6 +123,13 @@ def list_users() -> list[dict]:
     return [dict(r) for r in rows]
 
 
+def count_admins() -> int:
+    con = _get_con()
+    row = con.execute("SELECT COUNT(*) AS c FROM admin_users").fetchone()
+    con.close()
+    return row["c"] if row else 0
+
+
 def delete_user(user_id: int):
     con = _get_con()
     con.execute("DELETE FROM admin_users WHERE id=?", (user_id,))

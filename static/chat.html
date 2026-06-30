@@ -333,7 +333,7 @@
 const _isAdmin = !!localStorage.getItem('admin_token');
 let patient = null;
 try { patient = JSON.parse(localStorage.getItem('medbot_patient') || 'null'); } catch {}
-if (!patient && !_isAdmin) { window.location.href = '/login'; }
+if (!patient && !_isAdmin) { window.location.href = '/intake'; }
 
 if (patient && patient.name) {
   const chip = document.getElementById('patient-chip');
