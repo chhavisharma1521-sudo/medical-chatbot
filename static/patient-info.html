@@ -393,7 +393,7 @@ const KNOWN_CONDITIONS = ['Diabetes','Hypertension','Asthma','Heart Disease'];
 
 let patient = null;
 try { patient = JSON.parse(localStorage.getItem('medbot_patient') || 'null'); } catch {}
-if (!patient) { window.location.href = '/login'; }
+if (!patient) { window.location.href = '/intake'; }
 
 function display(id, val, fallback='Not provided'){
   const el = document.getElementById(id);
