@@ -113,6 +113,8 @@ tr:hover td{background:#fafcff}
   <div class="p-header">
     <div class="p-logo">Medi<span>Care</span> Portal</div>
     <div class="p-user">
+      <a href="/chat" class="p-logout" style="background:#1565C0;text-decoration:none;display:inline-flex;align-items:center;gap:6px">💬 Chat with MedBot</a>
+      <a href="/appointments" class="p-logout" style="background:#2E7D32;text-decoration:none;display:inline-flex;align-items:center;gap:6px">📅 Book Appointment</a>
       <span id="p-username"></span>
       <button class="p-logout" onclick="portalLogout()">Sign Out</button>
     </div>
@@ -228,6 +230,8 @@ async function portalLogin(){
   if(!res.ok){ err.textContent=data.detail||'Login failed'; err.style.display='block'; return; }
   localStorage.setItem('portal_token', data.token);
   localStorage.setItem('portal_name', data.name);
+  // Link to chatbot identity so MedBot chat works without re-asking
+  localStorage.setItem('medbot_patient', JSON.stringify({ name: data.name, email: data.email || email }));
   portalToken = data.token; portalName = data.name;
   initPortal();
 }
@@ -249,6 +253,7 @@ async function portalRegister(){
 
 function portalLogout(){
   localStorage.removeItem('portal_token'); localStorage.removeItem('portal_name');
+  localStorage.removeItem('medbot_patient');
   portalToken=null; portalName=null;
   document.getElementById('auth-screen').style.display='flex';
   document.getElementById('portal-app').style.display='none';

@@ -238,7 +238,7 @@ class ChatResponse(BaseModel):
 
 @app.get("/")
 async def root():
-    return FileResponse(str(STATIC_DIR / "chat.html"))
+    return FileResponse(str(STATIC_DIR / "portal.html"))
 
 
 @app.get("/chat")
