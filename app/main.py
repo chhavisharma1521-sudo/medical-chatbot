@@ -227,6 +227,38 @@ app = FastAPI(title="RAG Medical Chatbot", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
+# Routes that already log their own (richer) audit entries — middleware skips these to avoid duplicates
+_MANUAL_AUDIT_PREFIXES = (
+    "/admin/treatment-plans", "/admin/waitlist", "/admin/referrals", "/admin/pharmacy",
+)
+
+
+@app.middleware("http")
+async def audit_middleware(request: Request, call_next):
+    """Automatically record every admin write-action (create/update/delete) in the audit log."""
+    response = await call_next(request)
+    try:
+        path = request.url.path
+        if (request.method in ("POST", "PATCH", "PUT", "DELETE")
+                and path.startswith("/admin/")
+                and response.status_code < 400
+                and not path.startswith(_MANUAL_AUDIT_PREFIXES)):
+            admin_name = "admin"
+            auth = request.headers.get("authorization", "")
+            if auth.lower().startswith("bearer "):
+                payload = decode_token(auth.split(" ", 1)[1])
+                if payload:
+                    u = get_user_by_id(int(payload["sub"]))
+                    if u:
+                        admin_name = u.get("name", "admin")
+            action = {"POST": "CREATE", "PATCH": "UPDATE", "PUT": "UPDATE", "DELETE": "DELETE"}[request.method]
+            resource = path.replace("/admin/", "").strip("/")
+            log_action(admin_name, action, resource, "", f"{request.method} {path}")
+    except Exception:
+        pass
+    return response
+
+
 class ChatRequest(BaseModel):
     message: str
     history: list[dict] = []
@@ -479,7 +511,12 @@ async def auth_register(req: RegisterRequest):
 @app.post("/auth/login")
 async def auth_login(req: LoginRequest):
     try:
-        return login_user(req.identifier.strip(), req.password)
+        result = login_user(req.identifier.strip(), req.password)
+        try:
+            log_action(result.get("name", "admin"), "LOGIN", "auth", "", "Admin logged in")
+        except Exception:
+            pass
+        return result
     except ValueError as e:
         raise HTTPException(status_code=401, detail=str(e))
 
