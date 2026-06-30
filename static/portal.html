@@ -175,7 +175,37 @@ tr:hover td{background:#fafcff}
 
     <!-- LAB REPORTS -->
     <div class="p-panel" id="pp-lab">
-      <div class="p-section-title">Lab Reports</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+        <div class="p-section-title" style="margin:0">Lab Reports</div>
+        <button onclick="document.getElementById('lab-upload-box').style.display = document.getElementById('lab-upload-box').style.display==='none'?'block':'none'"
+                style="background:#1565C0;color:#fff;border:none;padding:10px 18px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer">
+          ⬆ Upload My Report
+        </button>
+      </div>
+      <div id="lab-upload-box" style="display:none;background:#F0F4FF;border:1.5px solid #DCE4F0;border-radius:12px;padding:18px;margin:14px 0">
+        <div style="font-size:13px;color:#607D8B;margin-bottom:12px">Bahar se test karwaya hai? Apni report yahan upload karein — aapke doctor ko bhi dikhegi.</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#607D8B;text-transform:uppercase">Report Type</label>
+            <select id="p-lab-type" style="width:100%;padding:9px;border:1.5px solid #DCE4F0;border-radius:8px;margin-top:4px">
+              <option>Blood Test</option><option>Urine Analysis</option><option>X-Ray</option>
+              <option>MRI</option><option>CT Scan</option><option>ECG</option>
+              <option>Lipid Profile</option><option>Liver Function</option><option>Kidney Function</option>
+              <option selected>General</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#607D8B;text-transform:uppercase">File (PDF / Image / TXT)</label>
+            <input id="p-lab-file" type="file" accept=".txt,.pdf,.png,.jpg,.jpeg" style="width:100%;padding:7px;border:1.5px solid #DCE4F0;border-radius:8px;margin-top:4px;background:#fff"/>
+          </div>
+        </div>
+        <input id="p-lab-notes" placeholder="Notes (optional)" style="width:100%;padding:9px;border:1.5px solid #DCE4F0;border-radius:8px;margin-bottom:12px"/>
+        <button id="p-lab-upload-btn" onclick="uploadMyLabReport()"
+                style="background:#2E7D32;color:#fff;border:none;padding:11px 22px;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer">
+          Upload & Analyze
+        </button>
+        <span id="p-lab-msg" style="margin-left:12px;font-size:13px"></span>
+      </div>
       <div id="lab-cards"></div>
     </div>
 
@@ -211,6 +241,35 @@ let healthCharts = {};
 
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function pHeaders(){ return {Authorization:`Bearer ${portalToken}`}; }
+
+async function uploadMyLabReport(){
+  const fileInput = document.getElementById('p-lab-file');
+  const file = fileInput.files[0];
+  const msg  = document.getElementById('p-lab-msg');
+  if(!file){ msg.textContent='Pehle file choose karein'; msg.style.color='#C62828'; return; }
+  const type  = document.getElementById('p-lab-type').value;
+  const notes = document.getElementById('p-lab-notes').value.trim();
+  const btn = document.getElementById('p-lab-upload-btn');
+  btn.disabled = true; btn.textContent = 'Uploading…'; msg.textContent='';
+  const fd = new FormData();
+  fd.append('file', file);
+  const url = `/portal/lab-reports/upload?report_type=${encodeURIComponent(type)}&notes=${encodeURIComponent(notes)}`;
+  try {
+    const res = await fetch(url, { method:'POST', headers: pHeaders(), body: fd });
+    const data = await res.json();
+    if(!res.ok){ msg.textContent = data.detail||'Upload failed'; msg.style.color='#C62828'; }
+    else {
+      msg.textContent = '✓ Uploaded! Doctor ko bhi dikh jayega.'; msg.style.color='#2E7D32';
+      fileInput.value=''; document.getElementById('p-lab-notes').value='';
+      await loadPortalData(); renderLabReports();
+      setTimeout(()=>{ document.getElementById('lab-upload-box').style.display='none'; msg.textContent=''; }, 1800);
+    }
+  } catch {
+    msg.textContent = 'Server se connect nahi hua'; msg.style.color='#C62828';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Upload & Analyze';
+  }
+}
 
 // ── Auth ──
 function switchAuthTab(tab, btn){

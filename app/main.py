@@ -23,7 +23,7 @@ from app.auth import (
     init_admin_db, register_user, login_user, get_user_by_id, list_users,
     delete_user, decode_token, count_admins,
 )
-from app.patients import init_patients_db, save_patient, list_patients
+from app.patients import init_patients_db, save_patient, list_patients, get_patient_by_email
 from app.appointments import (
     init_appointments_db, book_appointment, list_appointments, DOCTORS, TIME_SLOTS,
     update_status, update_payment_status, reschedule, appt_stats,
@@ -1585,7 +1585,14 @@ class PatientLoginRequest(BaseModel):
 @app.post("/portal/register")
 async def portal_register(req: PatientRegRequest):
     try:
-        return register_patient(req.name, req.email, req.password, req.phone)
+        result = register_patient(req.name, req.email, req.password, req.phone)
+        # Also create a patient record so the admin Patients list shows this person
+        try:
+            if not get_patient_by_email(req.email):
+                save_patient({"name": req.name, "email": req.email, "phone": req.phone})
+        except Exception:
+            pass
+        return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -1613,6 +1620,50 @@ async def portal_me(patient=Depends(require_patient)):
 @app.get("/portal/data")
 async def portal_data(patient=Depends(require_patient)):
     return get_patient_data(patient["name"])
+
+
+@app.post("/portal/lab-reports/upload")
+async def portal_upload_lab(
+    report_type: str = "General",
+    notes: str = "",
+    file: UploadFile = File(...),
+    patient=Depends(require_patient),
+):
+    """Patient uploads their own lab report / document — appears in their portal AND in admin under their name."""
+    suffix = Path(file.filename).suffix.lower()
+    if suffix not in {".txt", ".pdf", ".png", ".jpg", ".jpeg"}:
+        raise HTTPException(status_code=400, detail="Only TXT, PDF, PNG or JPG files allowed")
+    patient_name = patient["name"]
+    dest = UPLOADS_DIR / f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{file.filename}"
+    with open(dest, "wb") as f:
+        shutil.copyfileobj(file.file, f)
+
+    text = ""
+    if suffix == ".txt":
+        text = dest.read_text(errors="ignore")
+    elif suffix == ".pdf":
+        try:
+            import pypdf
+            reader = pypdf.PdfReader(str(dest))
+            text = "\n".join(p.extract_text() or "" for p in reader.pages)
+        except Exception:
+            text = ""
+
+    ai_result = analyze_report_text(text, patient_name, report_type) if text.strip() else {}
+
+    report = save_lab_report(
+        patient_name=patient_name,
+        report_type=report_type,
+        filename=file.filename,
+        file_path=str(dest),
+        ai_summary=ai_result.get("summary", ""),
+        key_findings=ai_result.get("key_findings", []),
+        notes="[Patient uploaded] " + notes,
+    )
+    if ai_result:
+        update_lab_analysis(report["id"], ai_result.get("summary", ""),
+                            ai_result.get("key_findings", []), "analyzed")
+    return {"message": "Report uploaded successfully", "id": report["id"]}
 
 
 # ── AI Tools ──────────────────────────────────────────────────

@@ -61,6 +61,16 @@ def save_patient(data: dict) -> int:
     return pid
 
 
+def get_patient_by_email(email: str) -> dict | None:
+    if not email or not DB_PATH.exists():
+        return None
+    con = sqlite3.connect(str(DB_PATH))
+    con.row_factory = sqlite3.Row
+    row = con.execute("SELECT * FROM patients WHERE email=? COLLATE NOCASE", (email,)).fetchone()
+    con.close()
+    return dict(row) if row else None
+
+
 def list_patients() -> list[dict]:
     if not DB_PATH.exists():
         return []
