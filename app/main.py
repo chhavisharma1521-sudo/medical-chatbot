@@ -1,3 +1,4 @@
+import os
 import shutil
 import time
 import sqlite3
@@ -486,6 +487,31 @@ class LoginRequest(BaseModel):
 async def setup_status():
     """Tells the login page whether an admin already exists (signup should be locked)."""
     return {"admin_exists": count_admins() > 0}
+
+
+class AdminRecoveryRequest(BaseModel):
+    secret_key: str
+
+
+@app.post("/auth/who-is-admin")
+async def who_is_admin(req: AdminRecoveryRequest):
+    """Recovery: list existing admin emails. Requires ADMIN_SECRET_KEY."""
+    expected = os.getenv("ADMIN_SECRET_KEY", "")
+    if not expected or req.secret_key != expected:
+        raise HTTPException(status_code=403, detail="Invalid secret key")
+    from app.auth import list_admin_emails
+    return {"admins": list_admin_emails()}
+
+
+@app.post("/auth/reset-admins")
+async def reset_admins(req: AdminRecoveryRequest):
+    """Recovery: wipe all admin accounts so a fresh admin can register. Requires ADMIN_SECRET_KEY."""
+    expected = os.getenv("ADMIN_SECRET_KEY", "")
+    if not expected or req.secret_key != expected:
+        raise HTTPException(status_code=403, detail="Invalid secret key")
+    from app.auth import delete_all_admins
+    n = delete_all_admins()
+    return {"message": f"Cleared {n} admin account(s). You can now register a new admin at /admin-login."}
 
 
 @app.post("/auth/register")

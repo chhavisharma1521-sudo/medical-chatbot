@@ -130,6 +130,22 @@ def count_admins() -> int:
     return row["c"] if row else 0
 
 
+def list_admin_emails() -> list[str]:
+    con = _get_con()
+    rows = con.execute("SELECT email, phone FROM admin_users").fetchall()
+    con.close()
+    return [(r["email"] or r["phone"] or "(unknown)") for r in rows]
+
+
+def delete_all_admins() -> int:
+    con = _get_con()
+    n = con.execute("SELECT COUNT(*) FROM admin_users").fetchone()[0]
+    con.execute("DELETE FROM admin_users")
+    con.commit()
+    con.close()
+    return n
+
+
 def delete_user(user_id: int):
     con = _get_con()
     con.execute("DELETE FROM admin_users WHERE id=?", (user_id,))
