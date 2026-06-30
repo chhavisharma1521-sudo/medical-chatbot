@@ -78,6 +78,12 @@
     .footer-note a{color:var(--blue);text-decoration:none;font-weight:600}
     .footer-note a:hover{text-decoration:underline}
 
+    .forgot-link{
+      display:block;text-align:right;font-size:12px;color:var(--blue);
+      text-decoration:none;font-weight:600;margin-top:-10px;margin-bottom:16px;cursor:pointer;
+    }
+    .forgot-link:hover{text-decoration:underline}
+
     .spinner{
       display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.4);
       border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px;
@@ -109,11 +115,49 @@
         <label>Password</label>
         <input type="password" id="login-password" placeholder="Enter your password" autocomplete="current-password" />
       </div>
+      <a class="forgot-link" onclick="switchTab('forgot')">Forgot password?</a>
       <button class="submit-btn" id="login-btn" onclick="doLogin()">Login to Admin Panel</button>
       <div class="msg" id="login-msg"></div>
       <div class="footer-note" style="margin-top:14px">
         Don't have an account? <a href="#" onclick="switchTab('signup');return false">Sign up here</a>
       </div>
+    </div>
+
+    <!-- ── FORGOT PASSWORD FORM ── -->
+    <div class="form-body" id="forgot-form" style="display:none">
+      <div style="text-align:center;margin-bottom:20px">
+        <div style="font-size:36px">🔑</div>
+        <div style="font-size:15px;font-weight:700;color:var(--text);margin-top:6px">Reset Password</div>
+        <div style="font-size:12.5px;color:var(--muted);margin-top:4px">Enter your email or phone — we'll send a reset link</div>
+      </div>
+      <div class="field">
+        <label>Email or Phone Number</label>
+        <input type="text" id="forgot-identifier" placeholder="Enter your email or phone" />
+      </div>
+      <button class="submit-btn" id="forgot-btn" onclick="doForgot()">Send Reset Link</button>
+      <div class="msg" id="forgot-msg"></div>
+      <div class="footer-note" style="margin-top:14px">
+        <a href="#" onclick="switchTab('login');return false">← Back to login</a>
+      </div>
+    </div>
+
+    <!-- ── RESET PASSWORD FORM ── -->
+    <div class="form-body" id="reset-form" style="display:none">
+      <div style="text-align:center;margin-bottom:20px">
+        <div style="font-size:36px">🔒</div>
+        <div style="font-size:15px;font-weight:700;color:var(--text);margin-top:6px">Set New Password</div>
+        <div style="font-size:12.5px;color:var(--muted);margin-top:4px">Choose a new password for your account</div>
+      </div>
+      <div class="field">
+        <label>New Password</label>
+        <input type="password" id="reset-password" placeholder="Min 6 characters" />
+      </div>
+      <div class="field">
+        <label>Confirm New Password</label>
+        <input type="password" id="reset-confirm" placeholder="Repeat new password" />
+      </div>
+      <button class="submit-btn" id="reset-btn" onclick="doReset()">Update Password</button>
+      <div class="msg" id="reset-msg"></div>
     </div>
 
     <!-- ── SIGNUP FORM ── -->
@@ -157,8 +201,12 @@ let identifierMode = 'email'; // 'email' | 'phone'
 function switchTab(tab) {
   document.getElementById('login-form').style.display  = tab === 'login'  ? '' : 'none';
   document.getElementById('signup-form').style.display = tab === 'signup' ? '' : 'none';
+  document.getElementById('forgot-form').style.display = tab === 'forgot' ? '' : 'none';
+  document.getElementById('reset-form').style.display  = tab === 'reset'  ? '' : 'none';
   document.getElementById('tab-login').classList.toggle('active',  tab === 'login');
   document.getElementById('tab-signup').classList.toggle('active', tab === 'signup');
+  // hide tabs row for forgot/reset screens
+  document.querySelector('.tabs').style.display = (tab === 'forgot' || tab === 'reset') ? 'none' : '';
   clearMsgs();
 }
 
@@ -269,6 +317,76 @@ document.addEventListener('keydown', e => {
   if (loginVisible) doLogin();
   else doSignup();
 });
+
+async function doForgot() {
+  const identifier = document.getElementById('forgot-identifier').value.trim();
+  if (!identifier) return showMsg('forgot-msg', 'Enter your email or phone number.', 'error');
+  const btn = document.getElementById('forgot-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Sending…';
+  try {
+    const res = await fetch('/auth/forgot-password', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({identifier}),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      showMsg('forgot-msg', data.detail || 'Not found.', 'error');
+    } else if (data.reset_url) {
+      // No SMTP configured — show the link directly
+      showMsg('forgot-msg', 'Reset link generated (email not configured):', 'success');
+      const link = document.createElement('a');
+      link.href = data.reset_url;
+      link.textContent = 'Click here to reset password';
+      link.style.cssText = 'display:block;margin-top:8px;color:#1565C0;font-weight:600;font-size:13px;word-break:break-all';
+      document.getElementById('forgot-msg').appendChild(link);
+    } else {
+      showMsg('forgot-msg', data.message || 'Reset link sent! Check your email.', 'success');
+    }
+  } catch {
+    showMsg('forgot-msg', 'Cannot reach server.', 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Send Reset Link';
+  }
+}
+
+let resetToken = '';
+async function doReset() {
+  const newPw  = document.getElementById('reset-password').value;
+  const confirm = document.getElementById('reset-confirm').value;
+  if (newPw.length < 6) return showMsg('reset-msg', 'Password must be at least 6 characters.', 'error');
+  if (newPw !== confirm) return showMsg('reset-msg', 'Passwords do not match.', 'error');
+  const btn = document.getElementById('reset-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Updating…';
+  try {
+    const res = await fetch('/auth/reset-password', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({token: resetToken, new_password: newPw}),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      showMsg('reset-msg', data.detail || 'Reset failed.', 'error');
+    } else {
+      showMsg('reset-msg', 'Password updated! Redirecting to login…', 'success');
+      setTimeout(() => { window.history.replaceState({}, '', '/login'); switchTab('login'); }, 2000);
+    }
+  } catch {
+    showMsg('reset-msg', 'Cannot reach server.', 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Update Password';
+  }
+}
+
+// Check for reset token in URL on page load
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('token');
+  if (token) {
+    resetToken = token;
+    switchTab('reset');
+  }
+})();
 
 // Redirect to admin if already logged in
 </script>

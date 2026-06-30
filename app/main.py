@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 load_dotenv()
 
-from fastapi import FastAPI, HTTPException, UploadFile, File, BackgroundTasks, Depends, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, UploadFile, File, BackgroundTasks, Depends, WebSocket, WebSocketDisconnect, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
@@ -17,6 +17,7 @@ from pydantic import BaseModel
 from app.rag import answer
 from app.logger import init_db, log_query, log_upload, DB_PATH, _extract_topics
 from app.powerbi import push_to_powerbi
+from app.forgot_password import init_reset_table, create_reset_token, verify_and_reset_password, send_reset_email
 from app.auth import (
     init_admin_db, register_user, login_user, get_user_by_id, list_users,
     delete_user, decode_token,
@@ -201,6 +202,7 @@ async def lifespan(app: FastAPI):
     DATA_DIR.mkdir(exist_ok=True)
     init_db()
     init_admin_db()
+    init_reset_table()
     init_patients_db()
     init_appointments_db()
     init_consultation_db()
@@ -445,6 +447,35 @@ async def auth_login(req: LoginRequest):
 @app.get("/auth/me")
 async def auth_me(user=Depends(require_auth)):
     return user
+
+
+class ForgotPasswordRequest(BaseModel):
+    identifier: str
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+@app.post("/auth/forgot-password")
+async def forgot_password(req: ForgotPasswordRequest, request: Request):
+    try:
+        result = create_reset_token(req.identifier.strip())
+        base_url = str(request.base_url).rstrip("/")
+        email_sent = send_reset_email(result["email"], result["name"], result["token"], base_url)
+        reset_url = f"{base_url}/login?token={result['token']}"
+        if email_sent:
+            return {"message": f"Reset link sent to {result['email']}"}
+        else:
+            return {"message": "Reset link generated", "reset_url": reset_url}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+@app.post("/auth/reset-password")
+async def reset_password(req: ResetPasswordRequest):
+    try:
+        return verify_and_reset_password(req.token, req.new_password)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 # ── Admin-only routes ─────────────────────────────────────────
