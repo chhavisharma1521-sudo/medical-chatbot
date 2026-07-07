@@ -422,6 +422,7 @@ function setFilter(spec, el) {
   filterDoctors();
 }
 
+let _searchScrolled = false;
 function filterDoctors() {
   // Searching/filtering should reveal the doctors list
   const sec = document.getElementById('doctors-section');
@@ -433,6 +434,12 @@ function filterDoctors() {
     return matchSpec && matchQ;
   });
   renderDoctors(filtered);
+  // Bring the results into view (once when the user starts typing/filtering)
+  if (q && !_searchScrolled) {
+    _searchScrolled = true;
+    setTimeout(() => document.querySelector('.section-header').scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+  }
+  if (!q) _searchScrolled = false;
 }
 
 function showDoctors() {
