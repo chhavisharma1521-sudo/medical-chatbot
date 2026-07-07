@@ -186,6 +186,10 @@
         <label>Confirm Password</label>
         <input type="password" id="signup-confirm" placeholder="Repeat your password" autocomplete="new-password" />
       </div>
+      <div class="field">
+        <label>🔑 Admin Secret Key</label>
+        <input type="password" id="signup-secret" placeholder="Required — only admins have this key" autocomplete="off" />
+      </div>
 
       <button class="submit-btn" id="signup-btn" onclick="doSignup()">Create Admin Account</button>
       <div class="msg" id="signup-msg"></div>
@@ -281,18 +285,20 @@ async function doSignup() {
   const phone    = identifierMode === 'phone' ? document.getElementById('signup-phone').value.trim() : '';
   const password = document.getElementById('signup-password').value;
   const confirm  = document.getElementById('signup-confirm').value;
+  const secret_key = document.getElementById('signup-secret').value;
 
   if (!name)              return showMsg('signup-msg', 'Please enter your full name.', 'error');
   if (!email && !phone)   return showMsg('signup-msg', 'Please enter an email or phone number.', 'error');
   if (password.length < 6) return showMsg('signup-msg', 'Password must be at least 6 characters.', 'error');
   if (password !== confirm) return showMsg('signup-msg', 'Passwords do not match.', 'error');
+  if (!secret_key)        return showMsg('signup-msg', 'Admin secret key is required.', 'error');
 
   setLoading('signup-btn', true);
   try {
     const res = await fetch('/auth/register', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({name, email, phone, password}),
+      body: JSON.stringify({name, email, phone, password, secret_key}),
     });
     const data = await res.json();
     if (!res.ok) {

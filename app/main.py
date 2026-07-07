@@ -523,6 +523,7 @@ class RegisterRequest(BaseModel):
     email: str = ""
     phone: str = ""
     password: str
+    secret_key: str = ""
 
 
 class LoginRequest(BaseModel):
@@ -563,7 +564,10 @@ async def reset_admins(req: AdminRecoveryRequest):
 
 @app.post("/auth/register")
 async def auth_register(req: RegisterRequest):
-    # Registration is open on the admin login page.
+    # Admin registration requires the secret key — only people who know it can create an admin.
+    expected = os.getenv("ADMIN_SECRET_KEY", "")
+    if expected and req.secret_key.strip() != expected:
+        raise HTTPException(status_code=403, detail="Galat secret key. Admin registration ke liye sahi secret key daalo.")
     try:
         result = register_user(
             name=req.name,
