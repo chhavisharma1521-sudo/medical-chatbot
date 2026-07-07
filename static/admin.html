@@ -532,6 +532,16 @@
 <div id="loading-overlay" class="loading-overlay"><div class="spinner"></div></div>
 <div class="toast" id="toast"></div>
 
+<!-- Appointment Approved Popup -->
+<div id="approve-popup" style="display:none;position:fixed;inset:0;background:rgba(13,71,161,.35);z-index:9999;align-items:center;justify-content:center">
+  <div id="approve-popup-card" style="background:#fff;border-radius:20px;padding:34px 30px;max-width:380px;width:90%;text-align:center;box-shadow:0 24px 70px rgba(0,0,0,.3);transform:scale(.8);opacity:0;transition:.28s cubic-bezier(.2,1.3,.4,1)">
+    <div style="width:78px;height:78px;margin:0 auto 16px;border-radius:50%;background:#E8F5E9;display:flex;align-items:center;justify-content:center;font-size:42px">✅</div>
+    <div style="font-size:20px;font-weight:800;color:#2E7D32;margin-bottom:6px">Appointment Approved!</div>
+    <div id="approve-popup-detail" style="font-size:13.5px;color:#607D8B;line-height:1.7;margin-bottom:20px"></div>
+    <button onclick="closeApprovePopup()" style="background:#1565C0;color:#fff;border:none;padding:11px 30px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">Done</button>
+  </div>
+</div>
+
 <div class="app" style="display:none" id="app-root">
 
   <!-- mobile overlay -->
@@ -1840,9 +1850,31 @@ async function remindAppt(id) {
 
 async function approveAppt(id) {
   if (!confirm('Approve this appointment?')) return;
+  const appt = appts.find(a => a.id === id) || {};
   const res = await fetch(`/admin/appointments/${id}/approve`, { method: 'PATCH', headers: authHeaders() });
-  if (res.ok) { showToast('Appointment approved', 'success'); await loadAppts(); renderAll(); }
+  if (res.ok) {
+    await loadAppts(); renderAll();
+    showApprovePopup(appt);
+  }
   else showToast('Failed to approve', 'error');
+}
+
+function showApprovePopup(appt) {
+  const detail = `<strong style="color:#1A1A2E">${esc(appt.patient_name||'Patient')}</strong>'s appointment with
+    <strong style="color:#1A1A2E">${esc(appt.doctor_name||'the doctor')}</strong><br>
+    📅 ${appt.appointment_date||''} &nbsp; ⏰ ${appt.appointment_time||''}<br>
+    <span style="color:#43A047;font-weight:600">Patient ko confirm ho gaya hai ✓</span>`;
+  document.getElementById('approve-popup-detail').innerHTML = detail;
+  const pop = document.getElementById('approve-popup');
+  const card = document.getElementById('approve-popup-card');
+  pop.style.display = 'flex';
+  requestAnimationFrame(() => { card.style.transform = 'scale(1)'; card.style.opacity = '1'; });
+}
+function closeApprovePopup() {
+  const pop = document.getElementById('approve-popup');
+  const card = document.getElementById('approve-popup-card');
+  card.style.transform = 'scale(.8)'; card.style.opacity = '0';
+  setTimeout(() => { pop.style.display = 'none'; }, 250);
 }
 
 async function cancelAppt(id) {
