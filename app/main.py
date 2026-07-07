@@ -563,12 +563,7 @@ async def reset_admins(req: AdminRecoveryRequest):
 
 @app.post("/auth/register")
 async def auth_register(req: RegisterRequest):
-    # First-admin pattern: once one admin exists, public signup is closed.
-    if count_admins() > 0:
-        raise HTTPException(
-            status_code=403,
-            detail="Admin registration is closed. Please contact the administrator.",
-        )
+    # Registration is open on the admin login page.
     try:
         result = register_user(
             name=req.name,

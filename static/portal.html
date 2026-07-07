@@ -488,7 +488,7 @@ function renderPrescriptions(){
         <td>${esc(r.diagnosis||'—')}</td>
         <td>${(r.medications||[]).map(m=>esc(m.name||m)).slice(0,2).join(', ')}${(r.medications||[]).length>2?'…':''}</td>
         <td>${esc(r.follow_up||'—')}</td>
-        <td><a href="/prescription-view?id=${r.id}" target="_blank" style="color:var(--blue);font-size:12px;font-weight:700">📄 Download PDF</a></td>
+        <td><a href="/prescription-view?id=${r.id}" target="_blank" style="display:inline-block;background:#1565C0;color:#fff;font-size:12px;font-weight:700;padding:7px 14px;border-radius:8px;text-decoration:none">📄 Download PDF</a></td>
       </tr>`).join('')
     : '<tr><td colspan="6" class="empty">No prescriptions yet</td></tr>';
 }
