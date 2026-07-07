@@ -306,17 +306,20 @@
   </div>
 </div>
 
-<!-- ══ FILTERS ══ -->
-<div class="filters" id="filters">
-  <div class="pill active" onclick="setFilter('All', this)">All Specializations</div>
-</div>
+<!-- ══ DOCTORS SECTION (hidden until 'Choose a Doctor' is clicked) ══ -->
+<div id="doctors-section" style="display:none">
+  <!-- ══ FILTERS ══ -->
+  <div class="filters" id="filters">
+    <div class="pill active" onclick="setFilter('All', this)">All Specializations</div>
+  </div>
 
-<!-- ══ DOCTORS ══ -->
-<div class="section-header">
-  <h2>Our Specialists</h2>
-  <span class="result-count" id="result-count">Loading…</span>
+  <!-- ══ DOCTORS ══ -->
+  <div class="section-header">
+    <h2>Our Specialists</h2>
+    <span class="result-count" id="result-count">Loading…</span>
+  </div>
+  <div class="doctors-grid" id="doctors-grid"></div>
 </div>
-<div class="doctors-grid" id="doctors-grid"></div>
 
 <!-- ══ BOOKING MODAL ══ -->
 <div class="modal-overlay" id="modal-overlay" onclick="closeModalOutside(event)">
@@ -420,6 +423,9 @@ function setFilter(spec, el) {
 }
 
 function filterDoctors() {
+  // Searching/filtering should reveal the doctors list
+  const sec = document.getElementById('doctors-section');
+  if (sec) sec.style.display = 'block';
   const q = document.getElementById('search-input').value.toLowerCase();
   let filtered = doctors.filter(d => {
     const matchSpec = currentFilter === 'All' || d.specialization === currentFilter;
@@ -430,8 +436,11 @@ function filterDoctors() {
 }
 
 function showDoctors() {
-  const hdr = document.querySelector('.section-header');
-  if (hdr) hdr.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const sec = document.getElementById('doctors-section');
+  sec.style.display = 'block';
+  setTimeout(() => {
+    document.querySelector('.section-header').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 60);
 }
 
 function renderDoctors(list = doctors) {
