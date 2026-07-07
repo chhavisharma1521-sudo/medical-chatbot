@@ -417,8 +417,21 @@ async def get_doctors():
     return DOCTORS
 
 
+@app.get("/api/blocked-dates")
+async def api_blocked_dates(doctor: str = ""):
+    """Public: dates a doctor is unavailable, so the booking page can block them."""
+    rows = get_blocked_dates(doctor or None)
+    return [r["blocked_date"] for r in rows]
+
+
 @app.post("/api/book")
 async def api_book(data: dict):
+    # Reject booking if the doctor has blocked that date
+    doctor_name = data.get("doctor_name", "")
+    appt_date = data.get("appointment_date", "")
+    blocked = {r["blocked_date"] for r in get_blocked_dates(doctor_name)}
+    if appt_date in blocked:
+        raise HTTPException(status_code=400, detail="Is date pe doctor available nahi hai. Kripya doosri date chunein.")
     aid = book_appointment(data)
     return {"id": aid, "message": "Appointment booked successfully"}
 

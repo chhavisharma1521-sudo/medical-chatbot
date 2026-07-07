@@ -305,7 +305,8 @@
         </div>
         <div class="m-field">
           <label>Appointment Date *</label>
-          <input id="b-date" type="date" />
+          <input id="b-date" type="date" onchange="checkBlockedDate()" />
+          <div id="b-date-warn" style="display:none;color:#C62828;font-size:12px;margin-top:5px;font-weight:600"></div>
         </div>
       </div>
 
@@ -515,6 +516,22 @@ function closeModalOutside(e) {
   if (e.target === document.getElementById('modal-overlay')) closeModal();
 }
 
+async function checkBlockedDate() {
+  const date = document.getElementById('b-date').value;
+  const warn = document.getElementById('b-date-warn');
+  warn.style.display = 'none';
+  if (!date || !selectedDoctor) return true;
+  try {
+    const blocked = await fetch('/api/blocked-dates?doctor=' + encodeURIComponent(selectedDoctor.name)).then(r=>r.ok?r.json():[]);
+    if (blocked.includes(date)) {
+      warn.textContent = '⚠️ ' + selectedDoctor.name + ' is not available on this date. Please pick another date.';
+      warn.style.display = 'block';
+      return false;
+    }
+  } catch {}
+  return true;
+}
+
 async function confirmBooking() {
   const name  = document.getElementById('b-name').value.trim();
   const phone = document.getElementById('b-phone').value.trim();
@@ -524,6 +541,7 @@ async function confirmBooking() {
   if (!phone)      return alert('Please enter your phone number.');
   if (!date)       return alert('Please select a date.');
   if (!selectedSlot) return alert('Please select a time slot.');
+  if (!(await checkBlockedDate())) return alert('Doctor is not available on this date. Please choose another date.');
 
   const btn = document.getElementById('confirm-btn');
   btn.disabled = true;
@@ -541,12 +559,20 @@ async function confirmBooking() {
   };
 
   try {
-    await fetch('/api/book', {
+    const res = await fetch('/api/book', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-  } catch { /* non-critical */ }
+    if (!res.ok) {
+      const err = await res.json().catch(()=>({}));
+      btn.disabled = false; btn.innerHTML = 'Confirm Booking';
+      return alert(err.detail || 'Booking failed. Please try another date.');
+    }
+  } catch {
+    btn.disabled = false; btn.innerHTML = 'Confirm Booking';
+    return alert('Could not reach server. Please try again.');
+  }
 
   // Show success
   document.getElementById('modal-form').style.display = 'none';
