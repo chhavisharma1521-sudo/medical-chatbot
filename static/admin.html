@@ -171,11 +171,35 @@
     }
     .search-input:focus{border-color:var(--blue-light);background:#fff}
 
+    /* ── Hamburger + overlay (hidden on desktop) ── */
+    .hamburger{display:none;background:none;border:none;font-size:24px;color:var(--blue);cursor:pointer;padding:0 10px 0 0;line-height:1}
+    .mobile-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:90}
+    .mobile-overlay.show{display:block}
+
     /* ── Responsive ── */
+    @media(max-width:1024px){
+      .sidebar{width:210px;min-width:210px}
+      .chart-grid{grid-template-columns:1fr}
+    }
     @media(max-width:768px){
-      .sidebar{width:200px;min-width:200px}
-      .content{padding:16px}
+      .sidebar{
+        position:fixed;top:0;left:0;height:100vh;width:76%;max-width:280px;
+        z-index:100;transform:translateX(-100%);transition:transform .28s ease;
+      }
+      .sidebar.open{transform:translateX(0)}
+      .hamburger{display:block}
+      .main{width:100%}
+      .content{padding:14px}
       .stats-grid{grid-template-columns:1fr 1fr}
+      .topbar{padding:12px 14px}
+      .page-sub{display:none}
+      .form-row,.form-row-3,.hm-grid,.chart-grid{grid-template-columns:1fr}
+      .tbl-wrap{overflow-x:auto}
+      table{font-size:12px;min-width:520px}
+    }
+    @media(max-width:460px){
+      .stats-grid{grid-template-columns:1fr}
+      .topbar-actions .refresh-btn span,.page-sub{display:none}
     }
 
     /* ══ NOTIFICATIONS ══ */
@@ -510,8 +534,11 @@
 
 <div class="app" style="display:none" id="app-root">
 
+  <!-- mobile overlay -->
+  <div class="mobile-overlay" id="mobileOverlay" onclick="toggleAdminSidebar()"></div>
+
   <!-- ══ SIDEBAR ══ -->
-  <aside class="sidebar">
+  <aside class="sidebar" id="sidebar">
     <div class="brand">
       <div class="brand-icon">⚕️</div>
       <div class="brand-name">MedBot Admin</div>
@@ -603,6 +630,7 @@
   <!-- ══ MAIN ══ -->
   <div class="main">
     <div class="topbar">
+      <button class="hamburger" onclick="toggleAdminSidebar()" aria-label="Menu">☰</button>
       <div>
         <div class="page-title" id="topbar-title">Dashboard</div>
         <div class="page-sub" id="topbar-sub">Overview of system activity</div>
@@ -1491,12 +1519,24 @@ const PANEL_META = {
   knowledge:     { title: '🧠 Knowledge Base',      sub: 'Vector database — how much medical data the chatbot can use' },
 };
 
+function toggleAdminSidebar(){
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('mobileOverlay');
+  const open = sb.classList.toggle('open');
+  ov.classList.toggle('show', open);
+}
+function closeAdminSidebar(){
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('mobileOverlay').classList.remove('show');
+}
+
 function gotoPanel(name) {
   currentPanel = name;
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.getElementById(`panel-${name}`).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   event.currentTarget.classList.add('active');
+  closeAdminSidebar();  // auto-close drawer on mobile after picking a panel
   document.getElementById('topbar-title').textContent = PANEL_META[name].title;
   document.getElementById('topbar-sub').textContent   = PANEL_META[name].sub;
   renderAll();

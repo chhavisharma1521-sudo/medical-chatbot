@@ -159,10 +159,16 @@
     }
     @keyframes pulse{0%,100%{box-shadow:0 4px 16px rgba(211,47,47,.5)}50%{box-shadow:0 4px 28px rgba(211,47,47,.8)}}
 
+    @media(max-width:900px){
+      .grid-3{grid-template-columns:1fr 1fr}
+    }
     @media(max-width:640px){
       .grid,.grid-3{grid-template-columns:1fr}
       .stats-strip{grid-template-columns:1fr 1fr}
       .profile-banner{flex-direction:column;text-align:center}
+      .page{margin:16px auto;padding:0 14px 40px}
+      .header{padding:0 16px;height:auto;flex-wrap:wrap;gap:8px}
+      .header-title{font-size:16px}
     }
   </style>
 </head>
