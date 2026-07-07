@@ -8,7 +8,7 @@ from pathlib import Path
 DB_PATH = Path("data/admin_users.db")
 SECRET_KEY = os.getenv("ADMIN_SECRET_KEY", "medbot-admin-secret-key-change-in-production")
 ALGORITHM = "HS256"
-TOKEN_EXPIRE_HOURS = 24
+TOKEN_EXPIRE_HOURS = 24 * 30  # stay logged in for 30 days
 
 
 def init_admin_db():

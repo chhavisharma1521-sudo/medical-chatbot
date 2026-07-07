@@ -108,16 +108,18 @@
 
     <!-- ── LOGIN FORM ── -->
     <div class="form-body" id="login-form">
-      <div class="field">
-        <label>Email or Phone Number</label>
-        <input type="text" id="login-identifier" placeholder="Enter email or phone number" autocomplete="username" />
-      </div>
-      <div class="field">
-        <label>Password</label>
-        <input type="password" id="login-password" placeholder="Enter your password" autocomplete="current-password" />
-      </div>
-      <a class="forgot-link" onclick="switchTab('forgot')">Forgot password?</a>
-      <button class="submit-btn" id="login-btn" onclick="doLogin()">Login to Admin Panel</button>
+      <form onsubmit="doLogin();return false;" autocomplete="on">
+        <div class="field">
+          <label>Email or Phone Number</label>
+          <input type="text" id="login-identifier" name="username" placeholder="Enter email or phone number" autocomplete="username" />
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input type="password" id="login-password" name="password" placeholder="Enter your password" autocomplete="current-password" />
+        </div>
+        <a class="forgot-link" onclick="switchTab('forgot')">Forgot password?</a>
+        <button type="submit" class="submit-btn" id="login-btn">Login to Admin Panel</button>
+      </form>
       <div class="msg" id="login-msg"></div>
       <div class="footer-note" style="margin-top:14px">
         Don't have an account? <a href="#" onclick="switchTab('signup');return false">Sign up here</a>
