@@ -826,6 +826,9 @@
 
       <!-- ══ USERS ══ -->
       <div class="panel" id="panel-users">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+          <button class="form-save-btn" onclick="openAddAdminModal()">+ Add Staff / Admin</button>
+        </div>
         <div class="section-card">
           <div class="section-header">
             <h3>Admin Users</h3>
@@ -836,6 +839,21 @@
               <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Created</th><th>Action</th></tr></thead>
               <tbody id="users-body"></tbody>
             </table>
+          </div>
+        </div>
+
+        <!-- Add Admin Modal -->
+        <div class="gen-modal" id="addadmin-modal" onclick="if(event.target===this)closeAddAdminModal()">
+          <div class="gen-modal-card">
+            <div class="gen-modal-head"><h3>➕ Add Staff / Admin</h3><button onclick="closeAddAdminModal()">✕</button></div>
+            <div class="gen-modal-body">
+              <div class="hm-field"><label>Full Name</label><input id="aa-name" placeholder="Staff member name"/></div>
+              <div class="hm-field"><label>Email</label><input id="aa-email" type="email" placeholder="email@example.com"/></div>
+              <div class="hm-field"><label>Phone (optional)</label><input id="aa-phone" placeholder="+91..."/></div>
+              <div class="hm-field"><label>Password</label><input id="aa-password" type="password" placeholder="Min 6 characters"/></div>
+              <button class="form-save-btn" onclick="saveNewAdmin()">Create Account</button>
+              <div id="aa-msg" style="font-size:13px;margin-top:10px"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -1806,12 +1824,20 @@ function renderAppts() {
         ${canApprove   ? `<button class="act-btn act-approve"    onclick="approveAppt(${a.id})">✓ Approve</button>`    : ''}
         ${canReschedule? `<button class="act-btn act-reschedule" onclick="openReschedule(${a.id})">📅 Reschedule</button>` : ''}
         ${canCancel    ? `<button class="act-btn act-cancel"     onclick="cancelAppt(${a.id})">✗ Cancel</button>`      : ''}
+        ${a.patient_email ? `<button class="act-btn" style="background:#EEF4FF;color:#1565C0" onclick="remindAppt(${a.id})">📧 Remind</button>` : ''}
       </td>
     </tr>`;
   }).join('');
 }
 
 /* ── Appointment actions ── */
+async function remindAppt(id) {
+  const res = await fetch(`/admin/appointments/${id}/remind`, { method: 'POST', headers: authHeaders() });
+  const data = await res.json().catch(()=>({}));
+  if (res.ok) showToast(data.message || 'Reminder sent', 'success');
+  else showToast(data.detail || 'Reminder failed', 'error');
+}
+
 async function approveAppt(id) {
   if (!confirm('Approve this appointment?')) return;
   const res = await fetch(`/admin/appointments/${id}/approve`, { method: 'PATCH', headers: authHeaders() });
@@ -1899,6 +1925,31 @@ function renderPatients() {
       <td class="td-truncate" style="max-width:200px" title="${esc(p.symptoms)}">${esc(p.symptoms || '—')}</td>
       <td style="color:var(--muted);font-size:12px;white-space:nowrap">${fmtDate(p.registered_at)}</td>
     </tr>`).join('');
+}
+
+function openAddAdminModal(){ document.getElementById('addadmin-modal').classList.add('open'); document.getElementById('aa-msg').textContent=''; }
+function closeAddAdminModal(){ document.getElementById('addadmin-modal').classList.remove('open'); }
+
+async function saveNewAdmin(){
+  const name = document.getElementById('aa-name').value.trim();
+  const email = document.getElementById('aa-email').value.trim();
+  const phone = document.getElementById('aa-phone').value.trim();
+  const password = document.getElementById('aa-password').value;
+  const msg = document.getElementById('aa-msg');
+  if(!name){ msg.textContent='Name zaroori hai'; msg.style.color='#E53935'; return; }
+  if(!email && !phone){ msg.textContent='Email ya phone daalo'; msg.style.color='#E53935'; return; }
+  if(password.length < 6){ msg.textContent='Password kam se kam 6 characters'; msg.style.color='#E53935'; return; }
+  const res = await fetch('/admin/users', {
+    method:'POST', headers:{...authHeaders(),'Content-Type':'application/json'},
+    body: JSON.stringify({name, email, phone, password})
+  });
+  const data = await res.json();
+  if(!res.ok){ msg.textContent = data.detail||'Failed'; msg.style.color='#E53935'; return; }
+  msg.textContent = '✓ ' + data.message; msg.style.color='#43A047';
+  document.getElementById('aa-name').value=''; document.getElementById('aa-email').value='';
+  document.getElementById('aa-phone').value=''; document.getElementById('aa-password').value='';
+  await loadUsers(); renderAll();
+  setTimeout(closeAddAdminModal, 1200);
 }
 
 async function deleteUser(id, name) {

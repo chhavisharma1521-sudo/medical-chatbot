@@ -477,6 +477,30 @@ async def appt_payment(appt_id: int, req: PaymentUpdate, _=Depends(require_auth)
     return {"message": "Payment status updated"}
 
 
+@app.post("/admin/appointments/{appt_id}/remind")
+async def appt_remind(appt_id: int, _=Depends(require_auth)):
+    """Send an appointment reminder email to the patient."""
+    from app.appointments import get_appointment
+    from app.emailer import send_email, appointment_reminder_html, is_email_configured
+    appt = get_appointment(appt_id)
+    if not appt:
+        raise HTTPException(status_code=404, detail="Appointment not found")
+    email = appt.get("patient_email", "")
+    if not email:
+        raise HTTPException(status_code=400, detail="Is patient ka email nahi hai")
+    if not is_email_configured():
+        raise HTTPException(status_code=400,
+            detail="Email setup nahi hai. Railway me SMTP_EMAIL aur SMTP_PASSWORD add karo.")
+    html = appointment_reminder_html(
+        appt.get("patient_name", "Patient"), appt.get("doctor_name", ""),
+        appt.get("appointment_date", ""), appt.get("appointment_time", ""),
+    )
+    ok = send_email(email, "Appointment Reminder — MedBot Clinic", html)
+    if not ok:
+        raise HTTPException(status_code=500, detail="Email bhejne me dikkat hui")
+    return {"message": f"Reminder sent to {email}"}
+
+
 @app.get("/login")
 async def login_page():
     return FileResponse(str(STATIC_DIR / "login.html"))
@@ -609,6 +633,21 @@ async def reset_password(req: ResetPasswordRequest):
 @app.get("/admin/users")
 async def admin_users(_=Depends(require_auth)):
     return list_users()
+
+
+@app.post("/admin/users")
+async def admin_add_user(req: RegisterRequest, current_user=Depends(require_auth)):
+    """An existing admin adds a new staff/admin account (bypasses the public signup lock)."""
+    try:
+        result = register_user(
+            name=req.name,
+            email=req.email.strip() or None,
+            phone=req.phone.strip() or None,
+            password=req.password,
+        )
+        return {"message": f"Admin '{req.name}' added", "id": result.get("id")}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @app.delete("/admin/users/{user_id}")
