@@ -284,11 +284,12 @@
 <div class="how-section">
   <div class="how-title">How to Book — 3 Easy Steps</div>
   <div class="how-grid">
-    <div class="how-step">
+    <div class="how-step" onclick="showDoctors()" style="cursor:pointer">
       <div class="how-num">1</div>
       <div class="how-icon">👨‍⚕️</div>
       <div class="how-h">Choose a Doctor</div>
       <div class="how-p">Browse specialists, check ratings &amp; fees, and pick the right one for you.</div>
+      <div style="margin-top:10px;color:var(--blue);font-size:12px;font-weight:700">👇 Click to view doctors</div>
     </div>
     <div class="how-step">
       <div class="how-num">2</div>
@@ -426,6 +427,11 @@ function filterDoctors() {
     return matchSpec && matchQ;
   });
   renderDoctors(filtered);
+}
+
+function showDoctors() {
+  const hdr = document.querySelector('.section-header');
+  if (hdr) hdr.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function renderDoctors(list = doctors) {
