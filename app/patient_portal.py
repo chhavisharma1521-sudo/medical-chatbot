@@ -69,7 +69,7 @@ def login_patient(email, password):
         raise ValueError("Invalid email or password")
     patient = dict(row)
     token = secrets.token_hex(32)
-    expires = (datetime.now() + timedelta(hours=24)).isoformat()
+    expires = (datetime.now() + timedelta(days=30)).isoformat()  # stay logged in for 30 days
     con.execute(
         "INSERT INTO patient_tokens (patient_id, token, expires_at) VALUES (?,?,?)",
         (patient['id'], token, expires)
