@@ -199,7 +199,7 @@ tr:hover td{background:#fafcff}
   </div>
 
   <!-- Patient Login / Register -->
-  <div class="land-loginsec" id="login-section">
+  <div class="land-loginsec" id="login-section" style="display:none">
     <div class="auth-card" style="margin:0 auto">
       <div class="auth-logo">Patient Login</div>
       <div class="auth-sub">Sign in to access your health dashboard</div>
@@ -440,7 +440,9 @@ function portalLogout(){
 }
 
 function scrollToLogin(){
-  document.getElementById('login-section').scrollIntoView({behavior:'smooth'});
+  const sec = document.getElementById('login-section');
+  sec.style.display = 'block';
+  sec.scrollIntoView({behavior:'smooth'});
   setTimeout(()=>document.getElementById('l-email').focus(), 400);
 }
 
