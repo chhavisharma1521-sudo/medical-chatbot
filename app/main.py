@@ -417,6 +417,32 @@ async def get_doctors():
     return DOCTORS
 
 
+@app.get("/api/highlights")
+async def api_highlights():
+    """Public stats for the portal landing page (like ORS 'Highlights')."""
+    from datetime import date
+    try:
+        appts = list_appointments()
+    except Exception:
+        appts = []
+    today = date.today().isoformat()
+    today_count = len([a for a in appts if (a.get("appointment_date", "") or "")[:10] == today])
+    try:
+        registered = len(list_patient_accounts())
+    except Exception:
+        registered = 0
+    try:
+        registered += len([p for p in list_patients() if p.get("email")])
+    except Exception:
+        pass
+    return {
+        "registered_patients": registered,
+        "appointments_today": today_count,
+        "total_appointments": len(appts),
+        "doctors": len(DOCTORS),
+    }
+
+
 @app.get("/api/blocked-dates")
 async def api_blocked_dates(doctor: str = ""):
     """Public: dates a doctor is unavailable, so the booking page can block them."""

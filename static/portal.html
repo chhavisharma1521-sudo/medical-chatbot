@@ -25,6 +25,43 @@ body{font-family:'Segoe UI',sans-serif;background:var(--bg);color:var(--text)}
 .auth-btn{width:100%;padding:13px;background:linear-gradient(135deg,var(--blue-dark),var(--blue));color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px}
 .auth-err{color:#E53935;font-size:12px;margin-top:8px;display:none}
 
+/* ── Landing page (ORS-style structure) ── */
+.land-wrap{min-height:100vh;background:var(--bg)}
+.land-nav{background:#fff;border-bottom:2px solid var(--border);padding:14px 30px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;flex-wrap:wrap;gap:10px}
+.land-brand{font-size:22px;font-weight:800;color:var(--blue-dark)}.land-brand span{color:var(--blue-light)}
+.land-nav-links{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.land-adminbtn{background:var(--blue-dark);color:#fff;border:none;padding:10px 20px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:7px}
+.land-adminbtn:hover{background:var(--blue)}
+.land-hero{background:linear-gradient(135deg,var(--blue-dark),var(--blue));color:#fff;padding:48px 30px;text-align:center}
+.land-hero h1{font-size:30px;font-weight:800;line-height:1.3;margin-bottom:10px}
+.land-hero p{font-size:15px;opacity:.9;max-width:560px;margin:0 auto}
+.land-actions{max-width:1000px;margin:-32px auto 0;padding:0 20px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.land-act{background:#fff;border:none;border-radius:14px;padding:20px;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 8px 30px rgba(13,43,107,.15);display:flex;align-items:center;justify-content:center;gap:10px;color:#fff;text-decoration:none;transition:.18s}
+.land-act:hover{transform:translateY(-3px)}
+.land-act.a1{background:linear-gradient(135deg,#1565C0,#1E88E5)}
+.land-act.a2{background:linear-gradient(135deg,#00897B,#26A69A)}
+.land-act.a3{background:linear-gradient(135deg,#5E35B1,#7E57C2)}
+.land-section-title{text-align:center;font-size:24px;font-weight:800;color:var(--blue-dark);margin:44px 0 6px}
+.land-section-sub{text-align:center;font-size:13px;color:var(--muted);margin-bottom:24px}
+.land-facilities{max-width:1000px;margin:0 auto;padding:0 20px;display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.fac-card{background:#fff;border:1.5px solid var(--border);border-radius:16px;padding:26px 16px;text-align:center;cursor:pointer;transition:.18s}
+.fac-card:hover{border-color:var(--blue-light);box-shadow:0 10px 30px rgba(13,43,107,.12);transform:translateY(-3px)}
+.fac-icon{width:64px;height:64px;margin:0 auto 12px;border-radius:50%;background:#EEF4FF;display:flex;align-items:center;justify-content:center;font-size:30px}
+.fac-name{font-size:15px;font-weight:700;color:var(--blue-dark)}
+.fac-desc{font-size:11.5px;color:var(--muted);margin-top:4px}
+.land-highlights{max-width:1000px;margin:0 auto;padding:0 20px 50px;display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.hl-card{background:#fff;border:1.5px solid var(--border);border-radius:16px;padding:24px;display:flex;align-items:center;gap:16px}
+.hl-icon{font-size:34px}
+.hl-num{font-size:28px;font-weight:800;color:var(--blue-dark)}
+.hl-lbl{font-size:12.5px;color:var(--muted);font-weight:600}
+.land-loginsec{background:linear-gradient(135deg,#f0f4ff,#e8f0fe);padding:44px 20px}
+@media(max-width:820px){
+  .land-actions{grid-template-columns:1fr}
+  .land-facilities{grid-template-columns:1fr 1fr}
+  .land-highlights{grid-template-columns:1fr}
+  .land-hero h1{font-size:23px}
+}
+
 /* App layout */
 #portal-app{display:none;min-height:100vh;flex-direction:column}
 .p-header{background:linear-gradient(135deg,var(--blue-dark),var(--blue));padding:16px 28px;display:flex;align-items:center;justify-content:space-between}
@@ -101,32 +138,93 @@ tr:hover td{background:#fafcff}
 </head>
 <body>
 
-<!-- AUTH SCREEN -->
-<div class="auth-wrap" id="auth-screen">
-  <div class="auth-card">
-    <div class="auth-logo">Medi<span>Care</span> Portal</div>
-    <div class="auth-sub">Your personal health dashboard</div>
-    <div class="auth-tabs">
-      <button class="auth-tab active" onclick="switchAuthTab('login',this)">Login</button>
-      <button class="auth-tab" onclick="switchAuthTab('register',this)">Register</button>
+<!-- LANDING / AUTH SCREEN -->
+<div class="land-wrap" id="auth-screen">
+
+  <!-- Top nav (Admin Login on same page) -->
+  <div class="land-nav">
+    <div class="land-brand">Medi<span>Care</span> Portal</div>
+    <div class="land-nav-links">
+      <a href="/chat" class="land-adminbtn" style="background:#00897B">💬 Chat with MedBot</a>
+      <a href="/admin-login" class="land-adminbtn">🔐 Admin / Hospital Login</a>
     </div>
-    <div id="auth-login">
-      <form onsubmit="portalLogin();return false;" autocomplete="on">
-        <div class="field"><label>Email</label><input id="l-email" name="username" type="email" placeholder="your@email.com" autocomplete="username"/></div>
-        <div class="field"><label>Password</label><input id="l-pass" name="password" type="password" placeholder="Password" autocomplete="current-password"/></div>
-        <button type="submit" class="auth-btn">Sign In</button>
-      </form>
-      <div class="auth-err" id="l-err"></div>
+  </div>
+
+  <!-- Hero -->
+  <div class="land-hero">
+    <h1>Online Appointment Booking &amp; Doctor Consultation</h1>
+    <p>Book appointments, chat with our AI medical assistant, view your prescriptions, lab reports and bills — all in one place.</p>
+  </div>
+
+  <!-- Main action buttons -->
+  <div class="land-actions">
+    <a href="/appointments" class="land-act a1">🚶 Book Appointment</a>
+    <a href="/chat" class="land-act a2">💬 Chat with MedBot</a>
+    <button class="land-act a3" onclick="scrollToLogin()">🔐 Patient Login / Register</button>
+  </div>
+
+  <!-- Other Facilities -->
+  <div class="land-section-title">Other Facilities</div>
+  <div class="land-section-sub">Login karke ye sab access karein</div>
+  <div class="land-facilities">
+    <div class="fac-card" onclick="scrollToLogin()">
+      <div class="fac-icon">💳</div>
+      <div class="fac-name">Payments</div>
+      <div class="fac-desc">View &amp; pay your bills</div>
     </div>
-    <div id="auth-register" style="display:none">
-      <form onsubmit="portalRegister();return false;" autocomplete="on">
-        <div class="field"><label>Full Name</label><input id="r-name" name="name" placeholder="Your full name" autocomplete="name"/></div>
-        <div class="field"><label>Email</label><input id="r-email" name="username" type="email" placeholder="your@email.com" autocomplete="username"/></div>
-        <div class="field"><label>Phone</label><input id="r-phone" name="phone" placeholder="+91 ..." autocomplete="tel"/></div>
-        <div class="field"><label>Password</label><input id="r-pass" name="password" type="password" placeholder="Create a password" autocomplete="new-password"/></div>
-        <button type="submit" class="auth-btn">Create Account</button>
-      </form>
-      <div class="auth-err" id="r-err"></div>
+    <div class="fac-card" onclick="scrollToLogin()">
+      <div class="fac-icon">🔬</div>
+      <div class="fac-name">Lab Reports</div>
+      <div class="fac-desc">Upload &amp; view reports</div>
+    </div>
+    <div class="fac-card" onclick="scrollToLogin()">
+      <div class="fac-icon">💊</div>
+      <div class="fac-name">Prescriptions</div>
+      <div class="fac-desc">Download as PDF</div>
+    </div>
+    <div class="fac-card" onclick="scrollToLogin()">
+      <div class="fac-icon">📈</div>
+      <div class="fac-name">Health Records</div>
+      <div class="fac-desc">Track your health</div>
+    </div>
+  </div>
+
+  <!-- Highlights -->
+  <div class="land-section-title">Highlights</div>
+  <div class="land-section-sub">Live clinic activity</div>
+  <div class="land-highlights">
+    <div class="hl-card"><div class="hl-icon">👥</div><div><div class="hl-num" id="hl-patients">—</div><div class="hl-lbl">Registered Patients</div></div></div>
+    <div class="hl-card"><div class="hl-icon">📅</div><div><div class="hl-num" id="hl-today">—</div><div class="hl-lbl">Appointments Today</div></div></div>
+    <div class="hl-card"><div class="hl-icon">🩺</div><div><div class="hl-num" id="hl-total">—</div><div class="hl-lbl">Total Appointments</div></div></div>
+  </div>
+
+  <!-- Patient Login / Register -->
+  <div class="land-loginsec" id="login-section">
+    <div class="auth-card" style="margin:0 auto">
+      <div class="auth-logo">Patient Login</div>
+      <div class="auth-sub">Sign in to access your health dashboard</div>
+      <div class="auth-tabs">
+        <button class="auth-tab active" onclick="switchAuthTab('login',this)">Login</button>
+        <button class="auth-tab" onclick="switchAuthTab('register',this)">Register</button>
+      </div>
+      <div id="auth-login">
+        <form onsubmit="portalLogin();return false;" autocomplete="on">
+          <div class="field"><label>Email</label><input id="l-email" name="username" type="email" placeholder="your@email.com" autocomplete="username"/></div>
+          <div class="field"><label>Password</label><input id="l-pass" name="password" type="password" placeholder="Password" autocomplete="current-password"/></div>
+          <button type="submit" class="auth-btn">Sign In</button>
+        </form>
+        <div class="auth-err" id="l-err"></div>
+      </div>
+      <div id="auth-register" style="display:none">
+        <form onsubmit="portalRegister();return false;" autocomplete="on">
+          <div class="field"><label>Full Name</label><input id="r-name" name="name" placeholder="Your full name" autocomplete="name"/></div>
+          <div class="field"><label>Email</label><input id="r-email" name="username" type="email" placeholder="your@email.com" autocomplete="username"/></div>
+          <div class="field"><label>Phone</label><input id="r-phone" name="phone" placeholder="+91 ..." autocomplete="tel"/></div>
+          <div class="field"><label>Password</label><input id="r-pass" name="password" type="password" placeholder="Create a password" autocomplete="new-password"/></div>
+          <button type="submit" class="auth-btn">Create Account</button>
+        </form>
+        <div class="auth-err" id="r-err"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -337,13 +435,28 @@ function portalLogout(){
   localStorage.removeItem('portal_token'); localStorage.removeItem('portal_name');
   localStorage.removeItem('medbot_patient');
   portalToken=null; portalName=null;
-  document.getElementById('auth-screen').style.display='flex';
+  document.getElementById('auth-screen').style.display='block';
   document.getElementById('portal-app').style.display='none';
+}
+
+function scrollToLogin(){
+  document.getElementById('login-section').scrollIntoView({behavior:'smooth'});
+  setTimeout(()=>document.getElementById('l-email').focus(), 400);
+}
+
+async function loadHighlights(){
+  try{
+    const h = await fetch('/api/highlights').then(r=>r.ok?r.json():null);
+    if(!h) return;
+    document.getElementById('hl-patients').textContent = (h.registered_patients||0).toLocaleString();
+    document.getElementById('hl-today').textContent    = (h.appointments_today||0).toLocaleString();
+    document.getElementById('hl-total').textContent    = (h.total_appointments||0).toLocaleString();
+  }catch{}
 }
 
 // ── Init ──
 async function initPortal(){
-  if(!portalToken){ document.getElementById('auth-screen').style.display='flex'; return; }
+  if(!portalToken){ document.getElementById('auth-screen').style.display='block'; loadHighlights(); return; }
   const me = await fetch('/portal/me',{headers:pHeaders()}).catch(()=>null);
   if(!me||!me.ok){ portalLogout(); return; }
   document.getElementById('auth-screen').style.display='none';
