@@ -170,7 +170,7 @@ tr:hover td{background:#fafcff}
     <div class="p-panel" id="pp-appointments">
       <div class="p-section-title">My Appointments</div>
       <div class="tbl-wrap"><table>
-        <thead><tr><th>Date</th><th>Time</th><th>Doctor</th><th>Specialization</th><th>Status</th><th>Payment</th></tr></thead>
+        <thead><tr><th>Date</th><th>Time</th><th>Doctor</th><th>Specialization</th><th>Status</th><th>Payment</th><th>Action</th></tr></thead>
         <tbody id="appt-tbody"></tbody>
       </table></div>
     </div>
@@ -406,15 +406,27 @@ function renderOverview(){
 function renderAppointments(){
   const rows = portalDataCache?.appointments||[];
   document.getElementById('appt-tbody').innerHTML = rows.length
-    ? rows.map(a=>`<tr>
+    ? rows.map(a=>{
+        const st = (a.status||'').toLowerCase();
+        const canCancel = st !== 'cancelled' && st !== 'completed';
+        return `<tr>
         <td>${a.appointment_date||'—'}</td>
         <td>${a.appointment_time||'—'}</td>
         <td><strong>${esc(a.doctor_name)}</strong></td>
         <td>${esc(a.specialization||'—')}</td>
-        <td><span class="badge ${(a.status||'').toLowerCase()}">${a.status||'—'}</span></td>
+        <td><span class="badge ${st}">${a.status||'—'}</span></td>
         <td><span class="badge ${(a.payment_status||'').toLowerCase()}">${a.payment_status||'—'}</span></td>
-      </tr>`).join('')
-    : '<tr><td colspan="6" class="empty">No appointments found</td></tr>';
+        <td>${canCancel ? `<button onclick="cancelMyAppt(${a.id})" style="background:#FFEBEE;color:#C62828;border:1px solid #F5C6CB;padding:6px 12px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">✗ Cancel</button>` : '—'}</td>
+      </tr>`;}).join('')
+    : '<tr><td colspan="7" class="empty">No appointments found</td></tr>';
+}
+
+async function cancelMyAppt(id){
+  if(!confirm('Kya aap ye appointment cancel karna chahte hain?')) return;
+  const res = await fetch(`/portal/appointments/${id}/cancel`, { method:'POST', headers: pHeaders() });
+  const data = await res.json().catch(()=>({}));
+  if(res.ok){ await loadPortalData(); renderAppointments(); alert('✓ Appointment cancelled'); }
+  else alert(data.detail || 'Cancel nahi ho paya');
 }
 
 function renderHealth(){

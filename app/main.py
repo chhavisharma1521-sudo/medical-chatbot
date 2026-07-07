@@ -1697,6 +1697,21 @@ async def portal_data(patient=Depends(require_patient)):
     return get_patient_data(patient["name"])
 
 
+@app.post("/portal/appointments/{appt_id}/cancel")
+async def portal_cancel_appointment(appt_id: int, patient=Depends(require_patient)):
+    """A patient cancels their OWN appointment (only if it belongs to them)."""
+    from app.appointments import get_appointment
+    appt = get_appointment(appt_id)
+    if not appt:
+        raise HTTPException(status_code=404, detail="Appointment not found")
+    if (appt.get("patient_name", "").lower() != patient["name"].lower()):
+        raise HTTPException(status_code=403, detail="Ye appointment aapki nahi hai")
+    if appt.get("status") == "Cancelled":
+        raise HTTPException(status_code=400, detail="Ye appointment pehle se cancelled hai")
+    update_status(appt_id, "Cancelled")
+    return {"message": "Appointment cancelled"}
+
+
 @app.get("/portal/profile")
 async def portal_get_profile(patient=Depends(require_patient)):
     """Patient's full profile from patients.db (or basics from their account)."""
