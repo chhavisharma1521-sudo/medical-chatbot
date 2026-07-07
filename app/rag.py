@@ -1,4 +1,5 @@
 import os
+import re
 from pathlib import Path
 import google.generativeai as genai
 import chromadb
@@ -8,6 +9,8 @@ CHROMA_DIR = Path("chroma_db")
 COLLECTION_NAME = "medical_docs"
 EMBED_MODEL = "all-MiniLM-L6-v2"
 TOP_K = 5
+CHUNK_SIZE = 500
+CHUNK_OVERLAP = 50
 
 _embedder = None
 _collection = None
@@ -18,7 +21,11 @@ SYSTEM_PROMPT = (
     "Answer questions accurately using the provided context from the medical knowledge base. "
     "Always remind users to consult a qualified healthcare professional for personalized advice. "
     "Never diagnose conditions definitively or replace professional medical consultation. "
-    "If the answer is not clearly in the context, acknowledge that and provide general guidance."
+    "If the answer is not clearly in the context, acknowledge that and provide general guidance. "
+    "IMPORTANT — Language: Always reply in the SAME language the user writes in. "
+    "If they write in Hindi (Devanagari), reply in Hindi. If they write in Hinglish "
+    "(Hindi using English letters), reply in Hinglish. If English, reply in English. "
+    "Match their language and tone naturally, and keep answers simple and easy to understand."
 )
 
 
@@ -33,8 +40,49 @@ def _get_collection():
     global _collection
     if _collection is None:
         client = chromadb.PersistentClient(path=str(CHROMA_DIR))
-        _collection = client.get_collection(COLLECTION_NAME)
+        # get_or_create so uploading works even if the KB was never ingested
+        _collection = client.get_or_create_collection(COLLECTION_NAME)
     return _collection
+
+
+def _chunk_text(text: str) -> list[str]:
+    sentences = re.split(r"(?<=[.!?])\s+", text.strip())
+    chunks, current = [], ""
+    for sent in sentences:
+        if len(current) + len(sent) + 1 <= CHUNK_SIZE:
+            current = (current + " " + sent).strip()
+        else:
+            if current:
+                chunks.append(current)
+            words = current.split()
+            overlap = " ".join(words[-(CHUNK_OVERLAP // 5):]) if words else ""
+            current = (overlap + " " + sent).strip()
+    if current:
+        chunks.append(current)
+    return [c for c in chunks if len(c) > 40]
+
+
+def add_document_to_kb(text: str, source_name: str) -> int:
+    """Chunk, embed and add a document's text to the vector DB so the chatbot can use it. Returns chunk count."""
+    chunks = _chunk_text(text)
+    if not chunks:
+        return 0
+    embedder = _get_embedder()
+    collection = _get_collection()
+    embeddings = embedder.encode(chunks, convert_to_numpy=True)
+    import time
+    stamp = int(time.time())
+    ids = [f"{Path(source_name).stem}_{stamp}_{i}" for i in range(len(chunks))]
+    metas = [{"source": source_name} for _ in chunks]
+    batch = 100
+    for i in range(0, len(chunks), batch):
+        collection.add(
+            documents=chunks[i:i + batch],
+            embeddings=embeddings[i:i + batch].tolist(),
+            ids=ids[i:i + batch],
+            metadatas=metas[i:i + batch],
+        )
+    return len(chunks)
 
 
 def _get_model():

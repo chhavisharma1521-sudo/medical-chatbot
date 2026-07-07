@@ -1408,6 +1408,15 @@
           <div style="font-size:12px;color:var(--muted)">Embedding Model</div>
           <div id="kb-model" style="font-size:15px;font-weight:700;color:var(--text);margin-top:4px">—</div>
         </div>
+        <div class="gen-card" style="padding:20px;margin-bottom:18px;border:1.5px dashed var(--blue-light);background:#F5F9FF">
+          <div style="font-size:13px;font-weight:700;color:var(--blue-dark);margin-bottom:6px">⬆ Add Medical Document</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:12px">TXT ya PDF upload karo — chatbot turant usse seekh jayega aur uske base pe jawab dega.</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+            <input id="kb-file" type="file" accept=".txt,.pdf" style="flex:1;min-width:200px;padding:8px;border:1.5px solid var(--border);border-radius:8px;background:#fff"/>
+            <button class="form-save-btn" id="kb-upload-btn" onclick="uploadKbDoc()">Upload &amp; Learn</button>
+          </div>
+          <div id="kb-upload-msg" style="font-size:13px;margin-top:10px"></div>
+        </div>
         <div class="section-card">
           <div class="section-header"><h3>Source Documents in Knowledge Base</h3><span class="section-count" id="kb-src-count">—</span></div>
           <div id="kb-body"></div>
@@ -3632,6 +3641,27 @@ async function loadAuditLog() {
 /* ══════════════════════════════════════════
    KNOWLEDGE BASE (Vector DB stats)
 ══════════════════════════════════════════ */
+async function uploadKbDoc() {
+  const fileInput = document.getElementById('kb-file');
+  const file = fileInput.files[0];
+  const msg = document.getElementById('kb-upload-msg');
+  if(!file){ msg.textContent='Pehle file choose karo'; msg.style.color='#E53935'; return; }
+  const btn = document.getElementById('kb-upload-btn');
+  btn.disabled = true; btn.textContent = 'Uploading…'; msg.textContent='';
+  const fd = new FormData();
+  fd.append('file', file);
+  try {
+    const res = await fetch('/upload', { method:'POST', body: fd });
+    const data = await res.json();
+    if(!res.ok){ msg.textContent = data.detail||'Upload failed'; msg.style.color='#E53935'; }
+    else { msg.textContent = '✓ ' + data.message; msg.style.color='#43A047'; fileInput.value=''; loadKnowledgeBase(); }
+  } catch {
+    msg.textContent = 'Server se connect nahi hua'; msg.style.color='#E53935';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Upload & Learn';
+  }
+}
+
 async function loadKnowledgeBase() {
   document.getElementById('kb-body').innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted)">Loading…</div>';
   const s = await fetch('/admin/knowledge-base/stats',{headers:authHeaders()}).then(r=>r.ok?r.json():null).catch(()=>null);

@@ -321,7 +321,30 @@ async def upload_document(file: UploadFile = File(...)):
     with open(dest, "wb") as f:
         shutil.copyfileobj(file.file, f)
     log_upload(file.filename)
-    return {"message": f"Uploaded '{file.filename}'. Run python ingest.py to index it."}
+
+    # Extract text and auto-index into the vector DB so the chatbot learns from it immediately
+    text = ""
+    try:
+        if suffix == ".txt":
+            text = dest.read_text(encoding="utf-8", errors="ignore")
+        elif suffix == ".pdf":
+            import pypdf
+            reader = pypdf.PdfReader(str(dest))
+            text = "\n".join(p.extract_text() or "" for p in reader.pages)
+    except Exception:
+        text = ""
+
+    chunks_added = 0
+    if text.strip():
+        try:
+            from app.rag import add_document_to_kb
+            chunks_added = add_document_to_kb(text, file.filename)
+        except Exception:
+            chunks_added = 0
+
+    if chunks_added:
+        return {"message": f"Uploaded '{file.filename}' and added {chunks_added} knowledge points. The chatbot can now use it!"}
+    return {"message": f"Uploaded '{file.filename}', but no readable text was found to index."}
 
 
 @app.get("/analytics")
