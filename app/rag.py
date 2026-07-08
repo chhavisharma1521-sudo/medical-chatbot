@@ -10,7 +10,8 @@ COLLECTION_NAME = "medical_docs"
 EMBED_MODEL = "all-MiniLM-L6-v2"
 TOP_K = 5
 CHUNK_SIZE = 1200
-CHUNK_OVERLAP = 50
+CHUNK_OVERLAP_RATIO = 0.18
+CHUNK_OVERLAP = int(CHUNK_SIZE * CHUNK_OVERLAP_RATIO)  # 216
 
 _embedder = None
 _collection = None
