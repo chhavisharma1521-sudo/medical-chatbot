@@ -50,11 +50,13 @@ body{font-family:'Segoe UI',sans-serif;background:var(--bg);color:var(--text)}
 .fac-name{font-size:15px;font-weight:700;color:var(--blue-dark)}
 .fac-desc{font-size:11.5px;color:var(--muted);margin-top:4px}
 .land-modules{max-width:1000px;margin:0 auto;padding:0 20px;display:grid;grid-template-columns:1fr 1fr;gap:18px}
-.mod-card{background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:22px;display:flex;gap:16px;align-items:flex-start;transition:.18s;border-bottom:3px solid var(--blue-light)}
+.mod-card{background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:22px;display:flex;gap:16px;align-items:flex-start;transition:.18s;border-bottom:3px solid var(--blue-light);cursor:pointer}
 .mod-card:hover{box-shadow:0 12px 30px rgba(13,43,107,.12);transform:translateY(-3px)}
 .mod-icon{font-size:34px;flex-shrink:0;width:56px;height:56px;border-radius:12px;background:#EEF4FF;display:flex;align-items:center;justify-content:center}
 .mod-name{font-size:15.5px;font-weight:700;color:var(--blue);margin-bottom:6px}
 .mod-desc{font-size:12.5px;color:var(--muted);line-height:1.6}
+.mod-link{font-size:12.5px;font-weight:700;color:var(--blue);margin-top:9px}
+.mod-card:hover .mod-link{text-decoration:underline}
 .land-highlights{max-width:1000px;margin:0 auto;padding:0 20px 50px;display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
 .hl-card{background:#fff;border:1.5px solid var(--border);border-radius:16px;padding:24px;display:flex;align-items:center;gap:16px}
 .hl-icon{font-size:34px}
@@ -200,46 +202,52 @@ tr:hover td{background:#fafcff}
   <div class="land-section-title">Hospital Modules</div>
   <div class="land-section-sub">Complete hospital management, all in one system</div>
   <div class="land-modules">
-    <div class="mod-card">
+    <div class="mod-card" onclick="location.href='/appointments'">
       <div class="mod-icon">📋</div>
       <div class="mod-body">
         <div class="mod-name">Patient Registration (OPD &amp; Appointment)</div>
         <div class="mod-desc">Register patients, book, confirm and cancel appointments for OPD and consultations.</div>
+        <div class="mod-link">Book Appointment →</div>
       </div>
     </div>
-    <div class="mod-card">
+    <div class="mod-card" onclick="scrollToLogin()">
       <div class="mod-icon">🛏️</div>
       <div class="mod-body">
         <div class="mod-name">Admission, Discharge &amp; Transfer (IPD)</div>
         <div class="mod-desc">Manage inpatient admissions, bed allotment, treatment during stay and discharge.</div>
+        <div class="mod-link">Login to view →</div>
       </div>
     </div>
-    <div class="mod-card">
+    <div class="mod-card" onclick="scrollToLogin()">
       <div class="mod-icon">💳</div>
       <div class="mod-body">
         <div class="mod-name">Billing</div>
         <div class="mod-desc">Handle all billing workflows — invoices, receipts, payments and refunds.</div>
+        <div class="mod-link">View my bills →</div>
       </div>
     </div>
-    <div class="mod-card">
+    <div class="mod-card" onclick="scrollToLogin()">
       <div class="mod-icon">🩺</div>
       <div class="mod-body">
         <div class="mod-name">Clinic (OPD &amp; IPD)</div>
         <div class="mod-desc">Record clinical data — visits, examination, diagnosis, history, treatment and prescriptions.</div>
+        <div class="mod-link">View prescriptions →</div>
       </div>
     </div>
-    <div class="mod-card">
+    <div class="mod-card" onclick="location.href='/chat'">
       <div class="mod-icon">💊</div>
       <div class="mod-body">
         <div class="mod-name">Pharmacy</div>
         <div class="mod-desc">Medicine inventory, stock levels, dispensing and drug-interaction checks.</div>
+        <div class="mod-link">Ask MedBot about medicines →</div>
       </div>
     </div>
-    <div class="mod-card">
+    <div class="mod-card" onclick="scrollToLogin()">
       <div class="mod-icon">🔬</div>
       <div class="mod-body">
         <div class="mod-name">Laboratory</div>
         <div class="mod-desc">Order lab tests, upload reports and view AI-analyzed results.</div>
+        <div class="mod-link">View lab reports →</div>
       </div>
     </div>
   </div>
