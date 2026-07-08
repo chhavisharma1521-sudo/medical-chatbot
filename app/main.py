@@ -225,6 +225,16 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="RAG Medical Chatbot", lifespan=lifespan)
+
+# Allow the ShiKhar Hospital site (and others) to call the chat API from the browser
+from fastapi.middleware.cors import CORSMiddleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
