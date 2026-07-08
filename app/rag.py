@@ -9,7 +9,7 @@ CHROMA_DIR = Path("chroma_db")
 COLLECTION_NAME = "medical_docs"
 EMBED_MODEL = "all-MiniLM-L6-v2"
 TOP_K = 5
-CHUNK_SIZE = 500
+CHUNK_SIZE = 1200
 CHUNK_OVERLAP = 50
 
 _embedder = None

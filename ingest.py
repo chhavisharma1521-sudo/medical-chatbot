@@ -22,7 +22,7 @@ except ImportError:
 DATA_DIR = Path("data")
 CHROMA_DIR = Path("chroma_db")
 COLLECTION_NAME = "medical_docs"
-CHUNK_SIZE = 500
+CHUNK_SIZE = 1200
 CHUNK_OVERLAP = 50
 EMBED_MODEL = "all-MiniLM-L6-v2"
 
