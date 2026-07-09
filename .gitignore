@@ -16,6 +16,9 @@ data/
 # Qdrant local lock file (runtime-only, must not be shipped)
 qdrant_db/.lock
 
+# Source PDFs/large docs — only the built qdrant_db is needed at runtime
+*.pdf
+
 # Large ML model cache
 .cache/
 sentence_transformers/
