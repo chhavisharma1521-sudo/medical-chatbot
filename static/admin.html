@@ -3132,10 +3132,22 @@ async function deleteAnn(id){
 /* ══════════════════════════════════════════
    BULK EXPORT
 ══════════════════════════════════════════ */
-function exportData(type){
-  const a = document.createElement('a');
-  a.href = `/admin/export/${type}`;
-  a.click();
+async function exportData(type){
+  try {
+    const res = await fetch(`/admin/export/${type}`, { headers: authHeaders() });
+    if (!res.ok) { showToast(`Export failed (${res.status})`, 'error'); return; }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${type}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    showToast('Export error', 'error');
+  }
 }
 
 async function readNotif(id) {
