@@ -170,6 +170,27 @@ def kb_stats() -> dict:
         }
 
 
+# Strong, unambiguous Hinglish marker words (rare in English) used to detect
+# whether a Latin-script question is Hinglish vs English.
+_HINGLISH_MARKERS = {
+    "kya", "hai", "hain", "kaise", "kaisa", "kaisi", "hota", "hoti", "hote",
+    "kyun", "kyu", "kyunki", "mein", "nahi", "nahin", "kaun", "kab", "kahan",
+    "mujhe", "karo", "karna", "karein", "chahiye", "kitna", "kitni", "batao",
+    "bata", "sakta", "sakte", "sakti", "raha", "rahi", "rahe", "thoda", "bahut",
+    "hoga", "hogi", "apna", "apni", "mera", "meri", "tum", "aap", "wala", "wale",
+}
+
+
+def _detect_language(text: str) -> str:
+    """Detect the reply language from the user's question (not the context)."""
+    if re.search(r"[ऀ-ॿ]", text):        # any Devanagari char
+        return "Hindi (Devanagari script)"
+    words = set(re.findall(r"[a-z]+", text.lower()))
+    if words & _HINGLISH_MARKERS:
+        return "Hinglish (Hindi written using English letters)"
+    return "English"
+
+
 def answer(question: str, history: list[dict]) -> str:
     embedder = _get_embedder()
     client = _get_client()
@@ -195,7 +216,10 @@ def answer(question: str, history: list[dict]) -> str:
 
     chat = model.start_chat(history=gemini_history)
 
+    reply_lang = _detect_language(question)
     full_message = (
+        f"RESPONSE LANGUAGE (STRICT): You MUST write your entire reply ONLY in {reply_lang}. "
+        f"Ignore the language of the context below — it is only reference material.\n\n"
         f"Medical Knowledge Base Context:\n{context}\n\n"
         f"Patient Question: {question}"
     )
