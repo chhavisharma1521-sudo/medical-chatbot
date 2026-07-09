@@ -3,14 +3,17 @@ Run this script once (and again after adding new documents) to build the vector 
 Usage: python ingest.py
 """
 
+import os
 import re
 import sys
+import uuid
 from pathlib import Path
 
 from dotenv import load_dotenv
 load_dotenv()
 
-import chromadb
+from qdrant_client import QdrantClient
+from qdrant_client.models import Distance, VectorParams, PointStruct
 from sentence_transformers import SentenceTransformer
 
 try:
@@ -20,8 +23,9 @@ except ImportError:
     HAS_PDF = False
 
 DATA_DIR = Path("data")
-CHROMA_DIR = Path("chroma_db")
+QDRANT_DIR = Path("qdrant_db")
 COLLECTION_NAME = "medical_docs"
+EMBED_DIM = 384
 CHUNK_SIZE = 1200
 CHUNK_OVERLAP_RATIO = 0.18
 CHUNK_OVERLAP = int(CHUNK_SIZE * CHUNK_OVERLAP_RATIO)  # 216
@@ -65,16 +69,21 @@ def main():
     print("Loading embedding model (downloads ~90 MB on first run)...")
     embedder = SentenceTransformer(EMBED_MODEL)
 
-    print("Connecting to ChromaDB...")
-    client = chromadb.PersistentClient(path=str(CHROMA_DIR))
+    print("Connecting to Qdrant...")
+    url = os.getenv("QDRANT_URL")
+    if url:
+        client = QdrantClient(url=url, api_key=os.getenv("QDRANT_API_KEY"))
+    else:
+        QDRANT_DIR.mkdir(exist_ok=True)
+        client = QdrantClient(path=str(QDRANT_DIR))
 
-    try:
-        client.delete_collection(COLLECTION_NAME)
-        print("Cleared previous collection.")
-    except Exception:
-        pass
-
-    collection = client.create_collection(COLLECTION_NAME)
+    # Fresh rebuild — drop and recreate the collection
+    client.delete_collection(COLLECTION_NAME)
+    client.create_collection(
+        collection_name=COLLECTION_NAME,
+        vectors_config=VectorParams(size=EMBED_DIM, distance=Distance.COSINE),
+    )
+    print("Created fresh collection.")
 
     all_docs, all_ids, all_meta = [], [], []
     doc_count = 0
@@ -94,9 +103,9 @@ def main():
             print(f"  [warn] No usable text in {fpath.name}")
             continue
 
-        for i, chunk in enumerate(chunks):
+        for chunk in chunks:
             all_docs.append(chunk)
-            all_ids.append(f"{fpath.stem}_{doc_count}_{i}")
+            all_ids.append(str(uuid.uuid4()))
             all_meta.append({"source": fpath.name})
 
         print(f"  -> {len(chunks)} chunks")
@@ -109,15 +118,15 @@ def main():
     print(f"\nGenerating embeddings for {len(all_docs)} chunks...")
     embeddings = embedder.encode(all_docs, show_progress_bar=True, convert_to_numpy=True)
 
-    print("Storing in ChromaDB...")
+    print("Storing in Qdrant...")
     batch = 100
     for i in range(0, len(all_docs), batch):
-        collection.add(
-            documents=all_docs[i:i + batch],
-            embeddings=embeddings[i:i + batch].tolist(),
-            ids=all_ids[i:i + batch],
-            metadatas=all_meta[i:i + batch],
-        )
+        points = [
+            PointStruct(id=all_ids[j], vector=embeddings[j].tolist(),
+                        payload={"text": all_docs[j], "source": all_meta[j]["source"]})
+            for j in range(i, min(i + batch, len(all_docs)))
+        ]
+        client.upsert(collection_name=COLLECTION_NAME, points=points)
 
     print(f"\nDone! {len(all_docs)} chunks from {doc_count} file(s) indexed.")
     print("Start the chatbot with:  uvicorn app.main:app --reload")

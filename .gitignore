@@ -13,6 +13,9 @@ __pycache__/
 data/
 *.db
 
+# Qdrant local lock file (runtime-only, must not be shipped)
+qdrant_db/.lock
+
 # Large ML model cache
 .cache/
 sentence_transformers/
