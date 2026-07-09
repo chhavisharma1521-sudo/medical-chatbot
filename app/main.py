@@ -460,8 +460,49 @@ async def api_blocked_dates(doctor: str = ""):
     return [r["blocked_date"] for r in rows]
 
 
+def _send_appt_confirmation(appt_id: int):
+    """Best-effort confirmation email — runs in background, never blocks/breaks booking."""
+    try:
+        from app.appointments import get_appointment
+        from app.emailer import send_email, appointment_confirmation_html, is_email_configured
+        if not is_email_configured():
+            return
+        appt = get_appointment(appt_id)
+        email = (appt or {}).get("patient_email", "")
+        if not appt or not email:
+            return
+        html = appointment_confirmation_html(
+            appt.get("patient_name", "Patient"), appt.get("doctor_name", ""),
+            appt.get("appointment_date", ""), appt.get("appointment_time", ""), appt_id,
+        )
+        send_email(email, "Appointment Confirmed — MedBot Clinic", html)
+    except Exception:
+        pass
+
+
+def _send_appt_status(appt_id: int, status: str):
+    """Best-effort approve/cancel email — runs in background."""
+    try:
+        from app.appointments import get_appointment
+        from app.emailer import send_email, appointment_status_html, is_email_configured
+        if not is_email_configured():
+            return
+        appt = get_appointment(appt_id)
+        email = (appt or {}).get("patient_email", "")
+        if not appt or not email:
+            return
+        html = appointment_status_html(
+            appt.get("patient_name", "Patient"), appt.get("doctor_name", ""),
+            appt.get("appointment_date", ""), appt.get("appointment_time", ""), status,
+        )
+        subject = "Appointment Approved — MedBot Clinic" if status.lower() == "approved" else "Appointment Cancelled — MedBot Clinic"
+        send_email(email, subject, html)
+    except Exception:
+        pass
+
+
 @app.post("/api/book")
-async def api_book(data: dict):
+async def api_book(data: dict, background: BackgroundTasks):
     # Reject booking if the doctor has blocked that date
     doctor_name = data.get("doctor_name", "")
     appt_date = data.get("appointment_date", "")
@@ -469,6 +510,7 @@ async def api_book(data: dict):
     if appt_date in blocked:
         raise HTTPException(status_code=400, detail="Is date pe doctor available nahi hai. Kripya doosri date chunein.")
     aid = book_appointment(data)
+    background.add_task(_send_appt_confirmation, aid)
     return {"id": aid, "message": "Appointment booked successfully"}
 
 
@@ -500,16 +542,18 @@ class RescheduleRequest(BaseModel):
 
 
 @app.patch("/admin/appointments/{appt_id}/approve")
-async def appt_approve(appt_id: int, _=Depends(require_auth)):
+async def appt_approve(appt_id: int, background: BackgroundTasks, _=Depends(require_auth)):
     if not update_status(appt_id, "Approved"):
         raise HTTPException(status_code=400, detail="Invalid status")
+    background.add_task(_send_appt_status, appt_id, "Approved")
     return {"message": "Appointment approved"}
 
 
 @app.patch("/admin/appointments/{appt_id}/cancel")
-async def appt_cancel(appt_id: int, _=Depends(require_auth)):
+async def appt_cancel(appt_id: int, background: BackgroundTasks, _=Depends(require_auth)):
     if not update_status(appt_id, "Cancelled"):
         raise HTTPException(status_code=400, detail="Invalid status")
+    background.add_task(_send_appt_status, appt_id, "Cancelled")
     return {"message": "Appointment cancelled"}
 
 
