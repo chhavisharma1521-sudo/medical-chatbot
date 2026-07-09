@@ -482,6 +482,46 @@ def _send_appt_confirmation(appt_id: int):
         print(f"[EMAIL] confirmation error for appt {appt_id}: {type(e).__name__}: {e}")
 
 
+def _send_appt_confirmation_whatsapp(appt_id: int):
+    """Best-effort WhatsApp confirmation — runs in background."""
+    try:
+        from app.appointments import get_appointment
+        from app.whatsapp import send_whatsapp, appointment_confirmation_text, is_whatsapp_configured
+        if not is_whatsapp_configured():
+            return
+        appt = get_appointment(appt_id)
+        phone = (appt or {}).get("patient_phone", "")
+        if not appt or not phone:
+            return
+        text = appointment_confirmation_text(
+            appt.get("patient_name", "Patient"), appt.get("doctor_name", ""),
+            appt.get("appointment_date", ""), appt.get("appointment_time", ""), appt_id,
+        )
+        send_whatsapp(phone, text)
+    except Exception as e:
+        print(f"[WHATSAPP] confirmation error for appt {appt_id}: {type(e).__name__}: {e}")
+
+
+def _send_appt_status_whatsapp(appt_id: int, status: str):
+    """Best-effort WhatsApp approve/cancel — runs in background."""
+    try:
+        from app.appointments import get_appointment
+        from app.whatsapp import send_whatsapp, appointment_status_text, is_whatsapp_configured
+        if not is_whatsapp_configured():
+            return
+        appt = get_appointment(appt_id)
+        phone = (appt or {}).get("patient_phone", "")
+        if not appt or not phone:
+            return
+        text = appointment_status_text(
+            appt.get("patient_name", "Patient"), appt.get("doctor_name", ""),
+            appt.get("appointment_date", ""), appt.get("appointment_time", ""), status,
+        )
+        send_whatsapp(phone, text)
+    except Exception as e:
+        print(f"[WHATSAPP] status({status}) error for appt {appt_id}: {type(e).__name__}: {e}")
+
+
 def _send_appt_status(appt_id: int, status: str):
     """Best-effort approve/cancel email — runs in background."""
     try:
@@ -515,6 +555,7 @@ async def api_book(data: dict, background: BackgroundTasks):
         raise HTTPException(status_code=400, detail="Is date pe doctor available nahi hai. Kripya doosri date chunein.")
     aid = book_appointment(data)
     background.add_task(_send_appt_confirmation, aid)
+    background.add_task(_send_appt_confirmation_whatsapp, aid)
     return {"id": aid, "message": "Appointment booked successfully"}
 
 
@@ -550,6 +591,7 @@ async def appt_approve(appt_id: int, background: BackgroundTasks, _=Depends(requ
     if not update_status(appt_id, "Approved"):
         raise HTTPException(status_code=400, detail="Invalid status")
     background.add_task(_send_appt_status, appt_id, "Approved")
+    background.add_task(_send_appt_status_whatsapp, appt_id, "Approved")
     return {"message": "Appointment approved"}
 
 
@@ -558,6 +600,7 @@ async def appt_cancel(appt_id: int, background: BackgroundTasks, _=Depends(requi
     if not update_status(appt_id, "Cancelled"):
         raise HTTPException(status_code=400, detail="Invalid status")
     background.add_task(_send_appt_status, appt_id, "Cancelled")
+    background.add_task(_send_appt_status_whatsapp, appt_id, "Cancelled")
     return {"message": "Appointment cancelled"}
 
 
