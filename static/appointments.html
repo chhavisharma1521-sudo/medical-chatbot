@@ -357,7 +357,7 @@
 
       <div class="m-field">
         <label>Select Time Slot *</label>
-        <div class="time-slots" id="time-slots"></div>
+        <div id="time-slots"></div>
       </div>
 
       <div class="m-field">
@@ -390,8 +390,11 @@
 </div>
 
 <script>
-const TIME_SLOTS = ['09:00 AM','09:30 AM','10:00 AM','10:30 AM','11:00 AM','11:30 AM','02:00 PM','02:30 PM','03:00 PM','03:30 PM','04:00 PM','04:30 PM'];
-const BOOKED_SLOTS = ['10:00 AM','03:00 PM']; // simulated booked slots
+const SESSIONS = [
+  { label: '🌅 Morning Session', time: '10:00 AM – 12:00 PM', slots: ['10:00 AM','10:30 AM','11:00 AM','11:30 AM','12:00 PM'] },
+  { label: '🌆 Evening Session', time: '05:00 PM – 07:00 PM', slots: ['05:00 PM','05:30 PM','06:00 PM','06:30 PM','07:00 PM'] },
+];
+const BOOKED_SLOTS = []; // reserved for future real-time booked slots
 
 let doctors = [];
 let currentFilter = 'All';
@@ -537,10 +540,15 @@ function openBooking(doctorId) {
     document.getElementById('b-reason').value = patient.symptoms || '';
   }
 
-  // Set min date to today
+  // Allow booking only from today up to 30 days ahead
   const today = new Date().toISOString().split('T')[0];
-  document.getElementById('b-date').min = today;
-  document.getElementById('b-date').value = '';
+  const maxD = new Date(); maxD.setDate(maxD.getDate() + 30);
+  const maxStr = maxD.toISOString().split('T')[0];
+  const dateEl = document.getElementById('b-date');
+  dateEl.min = today;
+  dateEl.max = maxStr;
+  dateEl.value = '';
+  document.getElementById('b-date-warn').style.display = 'none';
 
   // Fee summary
   document.getElementById('fs-fee').textContent  = '₹' + selectedDoctor.fee;
@@ -557,9 +565,17 @@ function openBooking(doctorId) {
 }
 
 function renderTimeSlots() {
-  document.getElementById('time-slots').innerHTML = TIME_SLOTS.map(t => {
-    const booked = BOOKED_SLOTS.includes(t);
-    return `<div class="slot${booked ? ' booked' : ''}" onclick="${booked ? '' : `selectSlot('${t}', this)`}">${t}</div>`;
+  document.getElementById('time-slots').innerHTML = SESSIONS.map(s => {
+    const slots = s.slots.map(t => {
+      const booked = BOOKED_SLOTS.includes(t);
+      return `<div class="slot${booked ? ' booked' : ''}" onclick="${booked ? '' : `selectSlot('${t}', this)`}">${t}</div>`;
+    }).join('');
+    return `<div style="margin-top:12px">
+      <div style="font-weight:600;font-size:13px;color:var(--blue);margin-bottom:6px">
+        ${s.label} <span style="color:#94a3b8;font-weight:400">(${s.time})</span>
+      </div>
+      <div class="time-slots">${slots}</div>
+    </div>`;
   }).join('');
 }
 
@@ -584,6 +600,15 @@ async function checkBlockedDate() {
   const warn = document.getElementById('b-date-warn');
   warn.style.display = 'none';
   if (!date || !selectedDoctor) return true;
+
+  // Clinic closed on Sundays
+  const d = new Date(date + 'T00:00:00');
+  if (d.getDay() === 0) {
+    warn.textContent = '⚠️ Clinic is closed on Sundays. Please pick another date.';
+    warn.style.display = 'block';
+    return false;
+  }
+
   try {
     const blocked = await fetch('/api/blocked-dates?doctor=' + encodeURIComponent(selectedDoctor.name)).then(r=>r.ok?r.json():[]);
     if (blocked.includes(date)) {
