@@ -505,17 +505,6 @@ def _send_appt_status(appt_id: int, status: str):
         print(f"[EMAIL] status({status}) error for appt {appt_id}: {type(e).__name__}: {e}")
 
 
-@app.get("/debug/email-test")
-async def debug_email_test(to: str = "chhavisharma1521@gmail.com"):
-    """TEMPORARY diagnostic — sends via the real Brevo path and returns the outcome."""
-    from app.emailer import send_email, is_email_configured, _sender_email
-    info = {"configured": is_email_configured(), "sender": _sender_email()}
-    if not info["configured"]:
-        return {**info, "result": "not_configured"}
-    ok = send_email(to, "MedBot email test", "<h2>Success!</h2><p>Your MedBot emails are working.</p>")
-    return {**info, "result": "sent" if ok else "failed", "to": to}
-
-
 @app.post("/api/book")
 async def api_book(data: dict, background: BackgroundTasks):
     # Reject booking if the doctor has blocked that date
