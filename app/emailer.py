@@ -25,8 +25,10 @@ def send_email(to_email: str, subject: str, html_body: str) -> bool:
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
             server.login(smtp_email, smtp_password)
             server.sendmail(smtp_email, to_email, msg.as_string())
+        print(f"[EMAIL] sent OK to {to_email} | subject={subject!r}")
         return True
-    except Exception:
+    except Exception as e:
+        print(f"[EMAIL] FAILED to {to_email} | {type(e).__name__}: {e}")
         return False
 
 

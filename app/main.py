@@ -466,18 +466,20 @@ def _send_appt_confirmation(appt_id: int):
         from app.appointments import get_appointment
         from app.emailer import send_email, appointment_confirmation_html, is_email_configured
         if not is_email_configured():
+            print(f"[EMAIL] confirmation skipped for appt {appt_id}: SMTP not configured")
             return
         appt = get_appointment(appt_id)
         email = (appt or {}).get("patient_email", "")
         if not appt or not email:
+            print(f"[EMAIL] confirmation skipped for appt {appt_id}: no patient_email (value={email!r})")
             return
         html = appointment_confirmation_html(
             appt.get("patient_name", "Patient"), appt.get("doctor_name", ""),
             appt.get("appointment_date", ""), appt.get("appointment_time", ""), appt_id,
         )
         send_email(email, "Appointment Confirmed — MedBot Clinic", html)
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"[EMAIL] confirmation error for appt {appt_id}: {type(e).__name__}: {e}")
 
 
 def _send_appt_status(appt_id: int, status: str):
@@ -486,10 +488,12 @@ def _send_appt_status(appt_id: int, status: str):
         from app.appointments import get_appointment
         from app.emailer import send_email, appointment_status_html, is_email_configured
         if not is_email_configured():
+            print(f"[EMAIL] status({status}) skipped for appt {appt_id}: SMTP not configured")
             return
         appt = get_appointment(appt_id)
         email = (appt or {}).get("patient_email", "")
         if not appt or not email:
+            print(f"[EMAIL] status({status}) skipped for appt {appt_id}: no patient_email (value={email!r})")
             return
         html = appointment_status_html(
             appt.get("patient_name", "Patient"), appt.get("doctor_name", ""),
@@ -497,8 +501,8 @@ def _send_appt_status(appt_id: int, status: str):
         )
         subject = "Appointment Approved — MedBot Clinic" if status.lower() == "approved" else "Appointment Cancelled — MedBot Clinic"
         send_email(email, subject, html)
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"[EMAIL] status({status}) error for appt {appt_id}: {type(e).__name__}: {e}")
 
 
 @app.post("/api/book")
