@@ -507,25 +507,13 @@ def _send_appt_status(appt_id: int, status: str):
 
 @app.get("/debug/email-test")
 async def debug_email_test(to: str = "chhavisharma1521@gmail.com"):
-    """TEMPORARY diagnostic — tries an SMTP send and returns the real outcome/error."""
-    import smtplib
-    from email.mime.text import MIMEText
-    e = os.getenv("SMTP_EMAIL", "")
-    p = os.getenv("SMTP_PASSWORD", "")
-    info = {"has_email": bool(e), "email": e, "has_pw": bool(p), "pw_len": len(p)}
-    if not (e and p):
+    """TEMPORARY diagnostic — sends via the real Brevo path and returns the outcome."""
+    from app.emailer import send_email, is_email_configured, _sender_email
+    info = {"configured": is_email_configured(), "sender": _sender_email()}
+    if not info["configured"]:
         return {**info, "result": "not_configured"}
-    try:
-        msg = MIMEText("<p>MedBot debug test email.</p>", "html")
-        msg["Subject"] = "MedBot debug test"
-        msg["From"] = e
-        msg["To"] = to
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=20) as s:
-            s.login(e, p)
-            s.sendmail(e, to, msg.as_string())
-        return {**info, "result": "sent", "to": to}
-    except Exception as ex:
-        return {**info, "result": "error", "error": f"{type(ex).__name__}: {ex}"}
+    ok = send_email(to, "MedBot email test", "<h2>Success!</h2><p>Your MedBot emails are working.</p>")
+    return {**info, "result": "sent" if ok else "failed", "to": to}
 
 
 @app.post("/api/book")

@@ -1,34 +1,55 @@
 import os
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import sys
+import json
+import urllib.request
+import urllib.error
+
+BREVO_URL = "https://api.brevo.com/v3/smtp/email"
+
+
+def _sender_email() -> str:
+    # sender must be a verified sender in Brevo; reuse SMTP_EMAIL which already holds it
+    return os.getenv("MAIL_SENDER") or os.getenv("SMTP_EMAIL") or ""
 
 
 def is_email_configured() -> bool:
-    return bool(os.getenv("SMTP_EMAIL") and os.getenv("SMTP_PASSWORD"))
+    return bool(os.getenv("BREVO_API_KEY") and _sender_email())
+
+
+def _log(msg: str):
+    print(msg, file=sys.stderr, flush=True)
 
 
 def send_email(to_email: str, subject: str, html_body: str) -> bool:
-    """Send an HTML email via Gmail SMTP. Returns True on success, False if not configured or failed."""
-    smtp_email = os.getenv("SMTP_EMAIL", "")
-    smtp_password = os.getenv("SMTP_PASSWORD", "")
-    if not smtp_email or not smtp_password or not to_email:
+    """Send an HTML email via the Brevo HTTP API (works on Railway, which blocks SMTP).
+    Returns True on success, False if not configured or failed."""
+    api_key = os.getenv("BREVO_API_KEY", "")
+    sender = _sender_email()
+    if not api_key or not sender or not to_email:
         return False
 
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = subject
-    msg["From"] = smtp_email
-    msg["To"] = to_email
-    msg.attach(MIMEText(html_body, "html"))
-
+    body = {
+        "sender": {"name": "MedBot Clinic", "email": sender},
+        "to": [{"email": to_email}],
+        "subject": subject,
+        "htmlContent": html_body,
+    }
+    req = urllib.request.Request(
+        BREVO_URL,
+        data=json.dumps(body).encode(),
+        headers={"api-key": api_key, "Content-Type": "application/json", "accept": "application/json"},
+        method="POST",
+    )
     try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-            server.login(smtp_email, smtp_password)
-            server.sendmail(smtp_email, to_email, msg.as_string())
-        print(f"[EMAIL] sent OK to {to_email} | subject={subject!r}")
-        return True
+        with urllib.request.urlopen(req, timeout=20) as r:
+            ok = r.status in (200, 201)
+        _log(f"[EMAIL] sent OK to {to_email} | subject={subject!r}")
+        return ok
+    except urllib.error.HTTPError as e:
+        _log(f"[EMAIL] FAILED to {to_email} | HTTP {e.code}: {e.read().decode()[:200]}")
+        return False
     except Exception as e:
-        print(f"[EMAIL] FAILED to {to_email} | {type(e).__name__}: {e}")
+        _log(f"[EMAIL] FAILED to {to_email} | {type(e).__name__}: {e}")
         return False
 
 
