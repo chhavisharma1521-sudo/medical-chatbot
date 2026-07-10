@@ -545,6 +545,30 @@ def _send_appt_status(appt_id: int, status: str):
         print(f"[EMAIL] status({status}) error for appt {appt_id}: {type(e).__name__}: {e}")
 
 
+def _create_invoice_for_appt(appt_id: int):
+    """Auto-generate a consultation invoice when an appointment is booked."""
+    try:
+        from app.appointments import get_appointment, DOCTORS as _DOCS
+        appt = get_appointment(appt_id)
+        if not appt:
+            return
+        doc = next((d for d in _DOCS if d["id"] == appt.get("doctor_id")), None)
+        fee = doc["fee"] if doc else 0
+        inv = create_invoice(
+            patient_name=appt.get("patient_name", ""),
+            doctor_name=appt.get("doctor_name", ""),
+            patient_phone=appt.get("patient_phone", ""),
+            patient_email=appt.get("patient_email", ""),
+            appointment_id=appt_id,
+            items=[{"desc": f"Consultation - {appt.get('doctor_name', '')}", "amount": fee}],
+        )
+        if appt.get("payment_status") == "Paid" and inv:
+            mark_paid(inv["id"])
+        print(f"[INVOICE] auto-created for appt {appt_id}: {inv.get('invoice_number')}")
+    except Exception as e:
+        print(f"[INVOICE] auto-create error for appt {appt_id}: {type(e).__name__}: {e}")
+
+
 @app.post("/api/book")
 async def api_book(data: dict, background: BackgroundTasks):
     # Reject booking if the doctor has blocked that date
@@ -556,6 +580,7 @@ async def api_book(data: dict, background: BackgroundTasks):
     aid = book_appointment(data)
     background.add_task(_send_appt_confirmation, aid)
     background.add_task(_send_appt_confirmation_whatsapp, aid)
+    background.add_task(_create_invoice_for_appt, aid)
     return {"id": aid, "message": "Appointment booked successfully"}
 
 
@@ -1232,6 +1257,23 @@ async def pay_invoice(inv_id: int, _=Depends(require_auth)):
 async def del_invoice(inv_id: int, _=Depends(require_auth)):
     delete_invoice(inv_id)
     return {"message": "Deleted"}
+
+
+@app.post("/admin/billing/invoices/{inv_id}/email")
+async def email_invoice(inv_id: int, _=Depends(require_auth)):
+    inv = get_invoice(inv_id)
+    if not inv:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    email = inv.get("patient_email", "")
+    if not email:
+        raise HTTPException(status_code=400, detail="Is invoice mein patient ka email nahi hai")
+    from app.emailer import send_email, invoice_html, is_email_configured
+    if not is_email_configured():
+        raise HTTPException(status_code=400, detail="Email setup nahi hai (BREVO_API_KEY)")
+    ok = send_email(email, f"Invoice {inv.get('invoice_number','')} — MedBot Clinic", invoice_html(inv))
+    if not ok:
+        raise HTTPException(status_code=500, detail="Email bhejne mein dikkat hui")
+    return {"message": f"Invoice emailed to {email}"}
 
 
 # ── Doctor Schedule ───────────────────────────────────────────

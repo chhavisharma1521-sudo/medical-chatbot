@@ -2745,6 +2745,7 @@ async function loadInvoices() {
   const res = await fetch(`/admin/billing/invoices${status?'?status='+status:''}`, {headers:authHeaders()});
   if(!res.ok) return;
   const invs = await res.json();
+  allInvoices = invs;
   const wrap = document.getElementById('inv-table-wrap');
   if(!invs.length){ wrap.innerHTML='<div style="color:var(--muted);text-align:center;padding:30px">No invoices</div>'; return; }
   wrap.innerHTML = `<div class="tbl-wrap"><table class="data-table">
@@ -2756,12 +2757,66 @@ async function loadInvoices() {
       <td style="font-weight:700">₹${Number(inv.total).toLocaleString()}</td>
       <td><span class="badge ${inv.status}">${inv.status}</span></td>
       <td>${inv.created_at?.slice(0,10)||'—'}</td>
-      <td>
+      <td style="white-space:nowrap">
         ${inv.status==='unpaid'?`<button class="na-btn na-view" onclick="markInvPaid(${inv.id})">Mark Paid</button>`:''}
+        <button class="na-btn" onclick="printInvoice(${inv.id})">🧾 PDF</button>
+        <button class="na-btn" onclick="emailInvoice(${inv.id})">📧 Email</button>
         <button class="na-btn" style="color:#E53935" onclick="delInvoice(${inv.id})">Delete</button>
       </td>
     </tr>`).join('')}</tbody>
   </table></div>`;
+}
+
+let allInvoices = [];
+
+async function emailInvoice(id){
+  const res = await fetch(`/admin/billing/invoices/${id}/email`, {method:'POST', headers:authHeaders()});
+  const d = await res.json().catch(()=>({}));
+  if(res.ok) showToast(d.message||'Invoice emailed', 'success');
+  else showToast(d.detail||'Email failed', 'error');
+}
+
+function printInvoice(id){
+  const inv = allInvoices.find(x=>x.id===id);
+  if(!inv){ showToast('Invoice not found','error'); return; }
+  const items = (inv.items||[]).map(it=>`<tr>
+      <td style="padding:9px 8px;border-bottom:1px solid #eee">${esc(it.desc||'Service')}</td>
+      <td style="padding:9px 8px;border-bottom:1px solid #eee;text-align:right">₹${Number(it.amount||0).toLocaleString()}</td></tr>`).join('')
+      || '<tr><td colspan="2" style="padding:9px 8px">—</td></tr>';
+  const paid = inv.status==='paid';
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(inv.invoice_number)}</title></head>
+  <body style="font-family:Segoe UI,Arial,sans-serif;color:#1A1A2E;max-width:640px;margin:20px auto;padding:24px">
+    <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #1565C0;padding-bottom:14px;margin-bottom:18px">
+      <div><div style="font-size:22px;font-weight:800;color:#1565C0">⚕️ MedBot Clinic</div>
+        <div style="color:#607D8B;font-size:12px">Management Panel</div></div>
+      <div style="text-align:right"><div style="font-weight:800;font-size:17px">INVOICE</div>
+        <div style="color:#607D8B;font-size:13px">${esc(inv.invoice_number)}</div></div>
+    </div>
+    <table style="width:100%;font-size:13.5px;margin-bottom:16px">
+      <tr><td style="color:#607D8B;padding:2px 0">Patient</td><td style="text-align:right;font-weight:600">${esc(inv.patient_name)}</td></tr>
+      <tr><td style="color:#607D8B;padding:2px 0">Doctor</td><td style="text-align:right">${esc(inv.doctor_name||'—')}</td></tr>
+      <tr><td style="color:#607D8B;padding:2px 0">Phone</td><td style="text-align:right">${esc(inv.patient_phone||'—')}</td></tr>
+      <tr><td style="color:#607D8B;padding:2px 0">Date</td><td style="text-align:right">${(inv.created_at||'').slice(0,10)}</td></tr>
+      <tr><td style="color:#607D8B;padding:2px 0">Status</td><td style="text-align:right;font-weight:700;color:${paid?'#2E7D32':'#C62828'}">${paid?'● PAID':'● UNPAID'}</td></tr>
+    </table>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:14px">
+      <tr style="background:#F0F4FF"><th style="padding:9px 8px;text-align:left;font-size:12px;color:#607D8B">SERVICE</th>
+        <th style="padding:9px 8px;text-align:right;font-size:12px;color:#607D8B">AMOUNT</th></tr>
+      ${items}
+    </table>
+    <table style="width:100%;font-size:14px">
+      <tr><td style="color:#607D8B;padding:2px 0">Subtotal</td><td style="text-align:right">₹${Number(inv.subtotal||0).toLocaleString()}</td></tr>
+      <tr><td style="color:#607D8B;padding:2px 0">Discount</td><td style="text-align:right">− ₹${Number(inv.discount||0).toLocaleString()}</td></tr>
+      <tr><td style="font-weight:800;font-size:17px;padding-top:8px;border-top:2px solid #1565C0">Total Payable</td>
+        <td style="text-align:right;font-weight:800;font-size:17px;padding-top:8px;border-top:2px solid #1565C0;color:#1565C0">₹${Number(inv.total||0).toLocaleString()}</td></tr>
+    </table>
+    ${inv.notes?`<p style="font-size:12px;color:#607D8B;margin-top:14px">Notes: ${esc(inv.notes)}</p>`:''}
+    <p style="text-align:center;color:#94a3b8;font-size:11px;margin-top:24px">Thank you! — MedBot Clinic</p>
+    <script>window.onload=function(){setTimeout(function(){window.print();},300);}<\/script>
+  </body></html>`;
+  const w = window.open('', '_blank');
+  if(!w){ showToast('Popup block hai — allow karo','error'); return; }
+  w.document.write(html); w.document.close();
 }
 
 let invItems = [];
