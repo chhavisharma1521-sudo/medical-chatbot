@@ -774,7 +774,8 @@
           <button class="appt-filter" onclick="filterAppts('Pending',this)">⏳ Pending</button>
           <button class="appt-filter" onclick="filterAppts('Approved',this)">✅ Approved</button>
           <button class="appt-filter" onclick="filterAppts('Cancelled',this)">❌ Cancelled</button>
-          <button class="appt-filter" style="margin-left:auto" onclick="filterAppts('Unpaid',this)">💳 Unpaid</button>
+          <button class="appt-filter" style="margin-left:auto" onclick="filterAppts('PayAtHospital',this)">🏥 Pay at Hospital</button>
+          <button class="appt-filter" onclick="filterAppts('Unpaid',this)">💳 Unpaid</button>
           <button class="appt-filter" onclick="filterAppts('Paid',this)">💰 Paid</button>
         </div>
 
@@ -1788,6 +1789,7 @@ function renderAppts() {
   else if (apptFilter === 'Cancelled') list = appts.filter(a => a.status === 'Cancelled');
   else if (apptFilter === 'Paid')   list = appts.filter(a => a.payment_status === 'Paid');
   else if (apptFilter === 'Unpaid') list = appts.filter(a => a.payment_status === 'Unpaid');
+  else if (apptFilter === 'PayAtHospital') list = appts.filter(a => a.payment_status === 'Pending');
 
   document.getElementById('appts-count').textContent = list.length + ' appointment' + (list.length !== 1 ? 's' : '');
   const tbody = document.getElementById('appts-body');
@@ -1806,6 +1808,7 @@ function renderAppts() {
     const payBadge = {
       'Paid':     '<span class="badge badge-green">💰 Paid</span>',
       'Unpaid':   '<span class="badge" style="background:#F5F5F5;color:#757575">💳 Unpaid</span>',
+      'Pending':  '<span class="badge" style="background:#FFF3E0;color:#E65100">⏳ Pending (at Hospital)</span>',
       'Refunded': '<span class="badge badge-orange">↩ Refunded</span>',
     }[a.payment_status] || `<span class="badge">${esc(a.payment_status||'—')}</span>`;
 
@@ -1825,6 +1828,7 @@ function renderAppts() {
       <td>${statusBadge}</td>
       <td>
         <select class="pay-select" onchange="changePayment(${a.id},this.value)">
+          <option value="Pending"  ${a.payment_status==='Pending'  ?'selected':''}>⏳ Pending (at Hospital)</option>
           <option value="Unpaid"   ${a.payment_status==='Unpaid'   ?'selected':''}>💳 Unpaid</option>
           <option value="Paid"     ${a.payment_status==='Paid'     ?'selected':''}>💰 Paid</option>
           <option value="Refunded" ${a.payment_status==='Refunded' ?'selected':''}>↩ Refunded</option>

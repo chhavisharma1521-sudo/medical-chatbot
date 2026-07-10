@@ -67,6 +67,10 @@ def _con():
 
 def book_appointment(data: dict) -> int:
     doctor = next((d for d in DOCTORS if d["id"] == int(data.get("doctor_id", 0))), None)
+    # Payment: "Pending" = Pay at Hospital (patient pays in person, admin clears later)
+    pay_status = data.get("payment_status", "Unpaid")
+    if pay_status not in {"Unpaid", "Paid", "Pending"}:
+        pay_status = "Unpaid"
     con = _con()
     cur = con.execute(
         """INSERT INTO appointments
@@ -84,7 +88,7 @@ def book_appointment(data: dict) -> int:
             data.get("appointment_time", ""),
             data.get("reason", ""),
             "Pending",
-            "Unpaid",
+            pay_status,
             datetime.now().isoformat(),
         ),
     )
@@ -125,7 +129,7 @@ def update_status(appt_id: int, status: str) -> bool:
 
 
 def update_payment_status(appt_id: int, payment_status: str) -> bool:
-    allowed = {"Unpaid", "Paid", "Refunded"}
+    allowed = {"Unpaid", "Paid", "Refunded", "Pending"}
     if payment_status not in allowed:
         return False
     con = _con()
