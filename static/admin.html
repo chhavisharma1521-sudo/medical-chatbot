@@ -786,6 +786,7 @@
           <button class="appt-filter" style="margin-left:auto" onclick="filterAppts('PayAtHospital',this)">🏥 Pay at Hospital</button>
           <button class="appt-filter" onclick="filterAppts('Unpaid',this)">💳 Unpaid</button>
           <button class="appt-filter" onclick="filterAppts('Paid',this)">💰 Paid</button>
+          <button class="appt-filter" onclick="filterAppts('Refunded',this)">↩ Refunded</button>
         </div>
 
         <div class="section-card">
@@ -1799,6 +1800,7 @@ function renderAppts() {
   else if (apptFilter === 'Paid')   list = appts.filter(a => a.payment_status === 'Paid');
   else if (apptFilter === 'Unpaid') list = appts.filter(a => a.payment_status === 'Unpaid');
   else if (apptFilter === 'PayAtHospital') list = appts.filter(a => a.payment_status === 'Pending');
+  else if (apptFilter === 'Refunded') list = appts.filter(a => a.payment_status === 'Refunded');
 
   document.getElementById('appts-count').textContent = list.length + ' appointment' + (list.length !== 1 ? 's' : '');
   const tbody = document.getElementById('appts-body');
