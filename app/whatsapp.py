@@ -8,6 +8,10 @@ import urllib.parse
 TWILIO_URL = "https://api.twilio.com/2010-04-01/Accounts/{sid}/Messages.json"
 
 
+def _clinic_name() -> str:
+    return os.getenv("CLINIC_NAME", "MedBot Clinic")
+
+
 def is_whatsapp_configured() -> bool:
     return bool(
         os.getenv("TWILIO_ACCOUNT_SID")
@@ -73,20 +77,24 @@ def send_whatsapp(to_phone: str, body: str) -> bool:
 
 
 def appointment_confirmation_text(name, doctor, date, time, appt_id=None) -> str:
+    clinic = _clinic_name()
     ref = f"\nRef: #{appt_id}" if appt_id else ""
     return (
+        f"*{clinic}* 🏥\n\n"
         f"Hi {name}! ✅ Aapka appointment book ho gaya hai.\n"
         f"👨‍⚕️ Doctor: {doctor}\n📅 Date: {date}\n⏰ Time: {time}{ref}\n\n"
-        f"Abhi status Pending hai — confirm hone par aapko message milega.\n— MedBot Clinic"
+        f"Abhi status Pending hai — confirm hone par aapko message milega.\n\n— {clinic}"
     )
 
 
 def appointment_status_text(name, doctor, date, time, status) -> str:
+    clinic = _clinic_name()
     if status.lower() == "approved":
         head = "🎉 Aapka appointment CONFIRM ho gaya hai!"
     else:
         head = "⚠️ Aapka appointment CANCEL kar diya gaya hai."
     return (
+        f"*{clinic}* 🏥\n\n"
         f"Hi {name}! {head}\n"
-        f"👨‍⚕️ Doctor: {doctor}\n📅 Date: {date}\n⏰ Time: {time}\n\n— MedBot Clinic"
+        f"👨‍⚕️ Doctor: {doctor}\n📅 Date: {date}\n⏰ Time: {time}\n\n— {clinic}"
     )
