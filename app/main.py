@@ -1,4 +1,5 @@
 import os
+import sys
 import shutil
 import time
 import sqlite3
@@ -564,9 +565,9 @@ def _create_invoice_for_appt(appt_id: int):
         )
         if appt.get("payment_status") == "Paid" and inv:
             mark_paid(inv["id"])
-        print(f"[INVOICE] auto-created for appt {appt_id}: {inv.get('invoice_number')}")
+        print(f"[INVOICE] auto-created for appt {appt_id}: {inv.get('invoice_number')}", file=sys.stderr, flush=True)
     except Exception as e:
-        print(f"[INVOICE] auto-create error for appt {appt_id}: {type(e).__name__}: {e}")
+        print(f"[INVOICE] auto-create error for appt {appt_id}: {type(e).__name__}: {e}", file=sys.stderr, flush=True)
 
 
 @app.post("/api/book")
