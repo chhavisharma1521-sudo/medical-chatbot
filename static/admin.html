@@ -721,6 +721,15 @@
 
       <!-- ══ UPLOADS ══ -->
       <div class="panel" id="panel-uploads">
+        <div class="section-card" style="margin-bottom:16px">
+          <div class="section-header"><h3>📤 Upload New Document</h3></div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:12px">TXT ya PDF upload karo — chatbot turant usse seekh jayega aur uske base pe jawab dega.</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+            <input id="up-file" type="file" accept=".txt,.pdf" style="flex:1;min-width:200px;padding:8px;border:1.5px solid var(--border);border-radius:8px;background:#fff"/>
+            <button class="form-save-btn" id="up-upload-btn" onclick="uploadDocFile()">Upload &amp; Learn</button>
+          </div>
+          <div id="up-upload-msg" style="font-size:13px;margin-top:10px"></div>
+        </div>
         <div class="section-card">
           <div class="section-header">
             <h3>Uploaded Documents</h3>
@@ -3754,6 +3763,30 @@ async function uploadKbDoc() {
     const data = await res.json();
     if(!res.ok){ msg.textContent = data.detail||'Upload failed'; msg.style.color='#E53935'; }
     else { msg.textContent = '✓ ' + data.message; msg.style.color='#43A047'; fileInput.value=''; loadKnowledgeBase(); }
+  } catch {
+    msg.textContent = 'Server se connect nahi hua'; msg.style.color='#E53935';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Upload & Learn';
+  }
+}
+
+async function uploadDocFile() {
+  const fileInput = document.getElementById('up-file');
+  const file = fileInput.files[0];
+  const msg = document.getElementById('up-upload-msg');
+  if(!file){ msg.textContent='Pehle file choose karo'; msg.style.color='#E53935'; return; }
+  const btn = document.getElementById('up-upload-btn');
+  btn.disabled = true; btn.textContent = 'Uploading…'; msg.textContent='';
+  const fd = new FormData();
+  fd.append('file', file);
+  try {
+    const res = await fetch('/upload', { method:'POST', body: fd });
+    const data = await res.json();
+    if(!res.ok){ msg.textContent = data.detail||'Upload failed'; msg.style.color='#E53935'; }
+    else {
+      msg.textContent = '✓ ' + data.message; msg.style.color='#43A047'; fileInput.value='';
+      await loadAnalytics(); renderUploads();
+    }
   } catch {
     msg.textContent = 'Server se connect nahi hua'; msg.style.color='#E53935';
   } finally {
